@@ -1,0 +1,44 @@
+openapi: 3.0.0
+info:
+  title: Fawredd Gym Assistant API - Workouts
+  version: 1.0.0
+paths:
+  /api/workouts:
+    get:
+      summary: Retrieves a list of workouts for the authenticated user
+      responses:
+        '200':
+          description: A list of workouts
+    post:
+      summary: Creates a new workout
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fecha:
+                  type: string
+                  format: date-time
+                ejercicios:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      nombre:
+                        type: string
+                      series:
+                        type: integer
+                      repeticiones:
+                        type: integer
+                      peso:
+                        type: number
+      responses:
+        '201':
+          description: Workout created successfully
+  /api/workouts/{id}:
+    put:
+      summary: Updates an existing workout
+    delete:
+      summary: Deletes an existing workout

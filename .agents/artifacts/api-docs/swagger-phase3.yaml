@@ -1,0 +1,114 @@
+openapi: 3.0.0
+info:
+  title: Clinical API - Phase 3 (Patients)
+  version: 1.0.0
+  description: API definitions for Patient CRUD and tenant isolation features.
+paths:
+  /api/patients:
+    get:
+      summary: List all patients within the user's tenant scope.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: A paginated list of patients.
+    post:
+      summary: Create a new patient.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatientInput'
+      responses:
+        '201':
+          description: Patient created successfully.
+        '403':
+          description: Forbidden (insufficient role).
+        '422':
+          description: Validation error.
+  /api/patients/{id}:
+    get:
+      summary: Get a specific patient.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Patient details.
+        '404':
+          description: Not found or out of tenant scope.
+    put:
+      summary: Update a patient.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatientInput'
+      responses:
+        '200':
+          description: Patient updated successfully.
+    delete:
+      summary: Soft delete a patient (sets fechabaja).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Patient deleted.
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    PatientInput:
+      type: object
+      required:
+        - tipodocumento
+        - documento
+        - nombre
+        - apellido
+      properties:
+        tipodocumento:
+          type: integer
+        documento:
+          type: string
+        nombre:
+          type: string
+        apellido:
+          type: string
+        sexo:
+          type: integer
+        fechanacimiento:
+          type: string
+          format: date
+        direccion:
+          type: string
+        telefono:
+          type: string
+        email:
+          type: string
+          format: email
