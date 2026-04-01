@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 
 export default function AiSuggestion() {
     const [suggestion, setSuggestion] = useState<string | null>(null);
@@ -31,13 +32,13 @@ export default function AiSuggestion() {
         <div className="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-100 p-6 rounded-xl shadow-sm mt-8">
             <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-bold tracking-tight text-indigo-900">Ayuda Memoria (IA)</h2>
-                <button
+                <Button
                     onClick={generateSuggestion}
                     disabled={isLoading}
-                    className="bg-indigo-600 text-white px-4 py-2 rounded-md font-medium text-sm hover:bg-indigo-700 disabled:opacity-50 transition shadow-sm"
+                    className="bg-indigo-600 hover:bg-indigo-700"
                 >
                     {isLoading ? "Generando..." : "Sugerir Entrenamiento"}
-                </button>
+                </Button>
             </div>
 
             {error && <p className="text-red-500 text-sm font-medium mb-4">{error}</p>}

@@ -320,5 +320,7 @@ Evitar definiciones subjetivas como “atractiva” sin criterio funcional.
 * Testing automatizado es deseable pero no bloqueante para MVP
 
 ---
-
+# 12. FINAL COMMENTS
+* sponsor user should tell in requirements if a production postgress and redis db will be used in development or if a docker container so to env vars to be configured.
+---
 Inicia leyendo AGENTS.md y luego continua con el desarrollo de la aplicacion.

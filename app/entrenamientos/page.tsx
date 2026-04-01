@@ -1,6 +1,7 @@
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import WorkoutForm from './WorkoutForm';
+import AiWorkoutForm from './AiWorkoutForm';
 import { db } from '../../db';
 import { workouts, users } from '../../db/schema';
 import { eq, desc } from 'drizzle-orm';
@@ -34,9 +35,17 @@ export default async function EntrenamientosPage() {
             </div>
 
             <div className="grid lg:grid-cols-2 gap-12">
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <h2 className="text-xl font-semibold mb-6">Registrar Nuevo Entrenamiento</h2>
-                    <WorkoutForm />
+                <div className="space-y-8">
+                    <div className="bg-white p-6 rounded-xl shadow-sm ring-1 ring-indigo-100 border border-transparent">
+                        <h2 className="text-xl font-semibold flex items-center mb-6 text-indigo-700">
+                            Carga Mágica Acelerada (IA) ✨
+                        </h2>
+                        <AiWorkoutForm />
+                    </div>
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <h2 className="text-xl font-semibold mb-6">Carga Manual Clásica</h2>
+                        <WorkoutForm />
+                    </div>
                 </div>
 
                 <div>
@@ -60,7 +69,10 @@ export default async function EntrenamientosPage() {
                                             <li key={ex.id} className="flex justify-between items-center">
                                                 <span className="font-medium">{ex.nombre}</span>
                                                 <span className="text-gray-500">
-                                                    {ex.series}x{ex.repeticiones} <span className="text-gray-400">|</span> {ex.peso}kg
+                                                    {ex.duracionSegundos && ex.duracionSegundos > 0
+                                                        ? <span className="font-mono bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded">{ex.duracionSegundos}s</span>
+                                                        : <>{ex.series}x{ex.repeticiones} <span className="text-gray-400">|</span> {ex.peso}kg</>
+                                                    }
                                                 </span>
                                             </li>
                                         ))}

@@ -6,6 +6,8 @@
 | WORK-001 | Workout CRUD & Data Schema | DONE | Technical BA | HIGH | AUTH-001 |
 | DASH-001 | Dashboard Views | DONE | Technical BA | MEDIUM | WORK-001 |
 | AI-001 | AI Recommendations engine | DONE | Technical BA | MEDIUM | WORK-001 |
+| TRG-001 | Triage: VercelPostgres missing_connection_string | DONE | Infra Engineer | HIGH | None |
+| WORK-002 | AI NLP to DB Workout Loader (ETL) | DONE | Technical BA | HIGH | AI-001 |
 
 ## PM Logs
 [PM]: Initializing backlog based on MVP scope from stakeholder inputs.

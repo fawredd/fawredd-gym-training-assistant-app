@@ -2,6 +2,10 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent } from '@/components/ui/card';
 
 export default function WorkoutForm() {
     const router = useRouter();
@@ -40,7 +44,7 @@ export default function WorkoutForm() {
 
             if (res.ok) {
                 setEjercicios([{ nombre: '', series: 3, repeticiones: 10, peso: 0 }]);
-                router.refresh(); // Refresh page data
+                router.refresh();
             } else {
                 alert("Error al guardar entrenamiento");
             }
@@ -53,69 +57,71 @@ export default function WorkoutForm() {
 
     return (
         <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
-                <input
+            <div className="space-y-2">
+                <Label htmlFor="fecha">Fecha</Label>
+                <Input
+                    id="fecha"
                     type="date"
                     required
                     value={fecha}
                     onChange={(e) => setFecha(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-md shadow-sm focus:ring-black focus:border-black"
                 />
             </div>
 
             <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                    <label className="block text-sm font-medium text-gray-700">Ejercicios</label>
-                </div>
+                <Label>Ejercicios</Label>
 
                 {ejercicios.map((ex, i) => (
-                    <div key={i} className="flex flex-col gap-3 p-4 bg-gray-50 border rounded-md relative">
-                        <button
+                    <Card key={i} className="relative shadow-sm">
+                        <Button
+                            variant="ghost"
+                            size="sm"
                             type="button"
                             onClick={() => handleRemoveExercise(i)}
-                            className="absolute top-2 right-2 text-gray-400 hover:text-red-500 text-sm font-bold"
-                        >×</button>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <div>
-                                <label className="block text-xs font-medium text-gray-500 mb-1">Nombre (ej. Press Banca)</label>
-                                <input type="text" required value={ex.nombre} onChange={(e) => handleExerciseChange(i, 'nombre', e.target.value)} className="w-full px-3 py-1.5 border rounded-md text-sm" />
+                            className="absolute top-2 right-2 h-6 w-6 p-0 text-gray-400 hover:text-red-500"
+                        >
+                            ×
+                        </Button>
+                        <CardContent className="pt-6 grid gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor={`nombre-${i}`}>Nombre (ej. Press Banca)</Label>
+                                <Input id={`nombre-${i}`} type="text" required value={ex.nombre} onChange={(e) => handleExerciseChange(i, 'nombre', e.target.value)} />
                             </div>
-                            <div className="grid grid-cols-3 gap-2">
-                                <div>
-                                    <label className="block text-xs font-medium text-gray-500 mb-1">Series</label>
-                                    <input type="number" required min="1" value={ex.series} onChange={(e) => handleExerciseChange(i, 'series', parseInt(e.target.value))} className="w-full px-2 py-1.5 border rounded-md text-sm" />
+                            <div className="grid grid-cols-3 gap-3">
+                                <div className="space-y-2">
+                                    <Label htmlFor={`series-${i}`}>Series</Label>
+                                    <Input id={`series-${i}`} type="number" required min="1" value={ex.series} onChange={(e) => handleExerciseChange(i, 'series', parseInt(e.target.value))} />
                                 </div>
-                                <div>
-                                    <label className="block text-xs font-medium text-gray-500 mb-1">Reps</label>
-                                    <input type="number" required min="1" value={ex.repeticiones} onChange={(e) => handleExerciseChange(i, 'repeticiones', parseInt(e.target.value))} className="w-full px-2 py-1.5 border rounded-md text-sm" />
+                                <div className="space-y-2">
+                                    <Label htmlFor={`reps-${i}`}>Reps</Label>
+                                    <Input id={`reps-${i}`} type="number" required min="1" value={ex.repeticiones} onChange={(e) => handleExerciseChange(i, 'repeticiones', parseInt(e.target.value))} />
                                 </div>
-                                <div>
-                                    <label className="block text-xs font-medium text-gray-500 mb-1">Peso(kg)</label>
-                                    <input type="number" required min="0" value={ex.peso} onChange={(e) => handleExerciseChange(i, 'peso', parseFloat(e.target.value))} className="w-full px-2 py-1.5 border rounded-md text-sm" />
+                                <div className="space-y-2">
+                                    <Label htmlFor={`peso-${i}`}>Peso(kg)</Label>
+                                    <Input id={`peso-${i}`} type="number" required min="0" value={ex.peso} onChange={(e) => handleExerciseChange(i, 'peso', parseFloat(e.target.value))} />
                                 </div>
                             </div>
-                        </div>
-                    </div>
+                        </CardContent>
+                    </Card>
                 ))}
 
-                <button
+                <Button
+                    variant="outline"
                     type="button"
                     onClick={handleAddExercise}
-                    className="w-full py-2 border-2 border-dashed border-gray-300 rounded-md text-gray-600 font-medium hover:border-gray-400 hover:bg-gray-50 transition-colors text-sm"
+                    className="w-full border-dashed"
                 >
                     + Agregar Ejercicio
-                </button>
+                </Button>
             </div>
 
-            <button
+            <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full py-2.5 bg-black text-white font-medium rounded-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black disabled:opacity-50 transition-all shadow-sm"
+                className="w-full"
             >
                 {isSubmitting ? 'Guardando...' : 'Guardar Entrenamiento'}
-            </button>
+            </Button>
         </form>
     );
 }

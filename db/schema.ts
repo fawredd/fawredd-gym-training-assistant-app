@@ -31,9 +31,10 @@ export const workoutExercises = fawreddGymSchema.table("workout_exercises", {
     id: text("id").primaryKey(),
     workoutId: text("workout_id").notNull().references(() => workouts.id, { onDelete: 'cascade' }),
     nombre: text("nombre").notNull(),
-    series: integer("series").notNull(),
-    repeticiones: integer("repeticiones").notNull(),
-    peso: integer("peso").notNull(),
+    series: integer("series").default(1),
+    repeticiones: integer("repeticiones").default(0),
+    peso: integer("peso").default(0),
+    duracionSegundos: integer("duracion_segundos").default(0),
     createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

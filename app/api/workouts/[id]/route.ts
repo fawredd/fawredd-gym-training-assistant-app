@@ -4,7 +4,8 @@ import { db } from '../../../../db';
 import { workouts, workoutExercises, users } from '../../../../db/schema';
 import { eq, and } from 'drizzle-orm';
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, context: { params: Promise<{ id: string }> }) {
+    const { id } = await context.params;
     const { userId } = await auth();
     if (!userId) return new NextResponse("Unauthorized", { status: 401 });
 
@@ -17,13 +18,13 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
 
     // 2. Verify workout belongs to user
     const workoutTarget = await db.query.workouts.findFirst({
-        where: and(eq(workouts.id, params.id), eq(workouts.userId, existingUser.id))
+        where: and(eq(workouts.id, id), eq(workouts.userId, existingUser.id))
     });
 
     if (!workoutTarget) return new NextResponse("Workout not found or access denied", { status: 403 });
 
     try {
-        await db.delete(workouts).where(eq(workouts.id, params.id));
+        await db.delete(workouts).where(eq(workouts.id, id));
         return new NextResponse(null, { status: 204 });
     } catch (error) {
         console.error("Error deleting workout", error);
@@ -31,7 +32,8 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     }
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> }) {
+    const { id } = await context.params;
     const { userId } = await auth();
     if (!userId) return new NextResponse("Unauthorized", { status: 401 });
 
@@ -41,7 +43,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     if (!existingUser) return new NextResponse("User not found", { status: 404 });
 
     const workoutTarget = await db.query.workouts.findFirst({
-        where: and(eq(workouts.id, params.id), eq(workouts.userId, existingUser.id))
+        where: and(eq(workouts.id, id), eq(workouts.userId, existingUser.id))
     });
     if (!workoutTarget) return new NextResponse("Workout not found or access denied", { status: 403 });
 
@@ -52,17 +54,17 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         if (fecha) {
             await db.update(workouts)
                 .set({ fecha: new Date(fecha), updatedAt: new Date() })
-                .where(eq(workouts.id, params.id));
+                .where(eq(workouts.id, id));
         }
 
         // Simplistic MVP transaction: wipe existing exercises and recreate.
         if (ejercicios) {
-            await db.delete(workoutExercises).where(eq(workoutExercises.workoutId, params.id));
+            await db.delete(workoutExercises).where(eq(workoutExercises.workoutId, id));
             if (ejercicios.length > 0) {
                 await db.insert(workoutExercises).values(
                     ejercicios.map((ex: any) => ({
                         id: crypto.randomUUID(),
-                        workoutId: params.id,
+                        workoutId: id,
                         nombre: ex.nombre,
                         series: ex.series,
                         repeticiones: ex.repeticiones,
