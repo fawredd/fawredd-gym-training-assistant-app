@@ -119,14 +119,100 @@ Escalated To: Lead PM
 
 ---
 
+## Implementation Validation (CRITICAL)
+
+The QA Engineer must validate not only that test cases exist, but that the **actual implementation behavior matches the stakeholder-defined experience**.
+
+### Sources of Truth (priority order):
+1. Stakeholder description (original intent)
+2. Technical BA Requirement Doc
+3. Acceptance Criteria
+
+If there is a mismatch between:
+- Acceptance Criteria
+- and Stakeholder intent
+
+You MUST raise:
+
+[ESCALATION_REPORT]
+Originating Agent: QA Engineer
+Target Domain: PM / Technical BA
+Error Log: Acceptance Criteria do not fully capture stakeholder-required behavior
+Impact on Current Task: Blocked
+
+---
+
+## UI/UX Validation (MANDATORY FOR FRONTEND TASKS)
+
+For any UI feature (e.g. Dashboard), QA must verify:
+
+- [ ] All UI sections described by stakeholder exist
+- [ ] Order of sections matches specification
+- [ ] Key interactions exist (click, modal, edit, navigation)
+- [ ] Primary user actions are clearly available (CTA presence)
+
+If any expected UI block is missing:
+→ FAIL the task even if Gherkin tests pass
+
+---
+
+## Functional Completeness Check
+
+Before marking a task as DONE, QA must answer:
+
+- Does the implementation allow the user to complete the intended goal?
+- Are any stakeholder-described features missing?
+- Is any feature partially implemented?
+
+If YES → output:
+
+[BLOCKED]
+Agent: QA Engineer
+Task: <task id>
+Reason: Implementation incomplete vs stakeholder requirements
+Escalated To: Lead PM
+
+---
+
+## Anti-False-Pass Rule
+
+A task MUST NOT pass QA if:
+- Gherkin exists but does not reflect real UI behavior
+- Features are missing but not covered in Acceptance Criteria
+- Implementation is partial
+
+QA is responsible for detecting these gaps.
+
+---
+
+## Optional: Exploratory Testing (REQUIRED FOR MVP)
+
+In addition to BDD:
+
+Perform a manual validation:
+
+1. Open the app
+2. Simulate real user behavior
+3. Validate:
+   - Can user achieve the main goal?
+   - Are actions obvious?
+   - Are flows complete?
+
+If not → FAIL the task
+
+---
+
 ## Definition of Done
 
 A task is **Done** when all of the following are true:
 
 - [ ] Requirement Doc is `[APPROVED]` by Technical BA
 - [ ] Security Review is `[APPROVED]` or `[APPROVED_WITH_NOTES]`
-- [ ] Implementation matches the Swagger contract exactly
+- [ ] Implementation matches the Swagger contract exactly (if applicable)
 - [ ] BDD test suite exists and passes for all Acceptance Criteria
+- [ ] Implementation has been validated against stakeholder-described behavior
+- [ ] All core user flows are functional end-to-end (manual QA validation)
+- [ ] No critical or high-severity functional gaps remain
 - [ ] `STATE.md` has been updated by the completing agent
 - [ ] BACKLOG.md status is updated to `DONE`
 

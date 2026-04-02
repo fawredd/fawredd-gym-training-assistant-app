@@ -60,7 +60,7 @@ export default function AiWorkoutForm() {
                     placeholder="Ej: Ayer lunes hice pecho: press banca 4x10 con 60kg. Hoy martes hice core: plancha frontal 3 series de 30 segundos cada una."
                     className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
                 />
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                     Asegúrate de indicar de alguna manera cuándo fue tu entreno ("ayer", "el sábado", "15 de marzo"). Si omites la fecha, se usará la Fecha de Referencia.
                 </p>
             </div>
@@ -68,7 +68,7 @@ export default function AiWorkoutForm() {
             <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"
+                className="w-full"
             >
                 {isSubmitting ? 'Procesando y Guardando (IA)...' : 'Analizar y Cargar Magicamente ✨'}
             </Button>

@@ -78,7 +78,7 @@ export default function WorkoutForm() {
                             size="sm"
                             type="button"
                             onClick={() => handleRemoveExercise(i)}
-                            className="absolute top-2 right-2 h-6 w-6 p-0 text-gray-400 hover:text-red-500"
+                            className="absolute top-2 right-2 h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
                         >
                             ×
                         </Button>
