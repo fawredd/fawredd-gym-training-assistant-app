@@ -1,5 +1,8 @@
 ---
-trigger: always_on
+name: Workspace Governance
+description: Global agile workflow and operating rules for all agents in this repository
+model: gpt-4.1
+tools: [codebase, terminal, github]
 ---
 
 # Agile Process Rules
