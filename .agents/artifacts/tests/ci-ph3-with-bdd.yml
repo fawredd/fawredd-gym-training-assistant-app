@@ -1,0 +1,273 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+env:
+  NODE_VERSION: "20"
+  PNPM_VERSION: "9"
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    # Set up local Postgres and Redis services for test execution
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      # --- Checkout code ---
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # --- Setup Node.js and pnpm ---
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      # --- Install dependencies ---
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # --- Environment setup for CI ---
+      - name: Setup environment variables for CI
+        run: |
+          cat > .env.ci <<EOF
+          NODE_ENV=test
+          POSTGRES_DB=${{ secrets.POSTGRES_DB }}
+          POSTGRES_USER=${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_HOST=localhost
+          POSTGRES_PORT=5432
+          POSTGRES_URL=postgresql://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@localhost:5432/${{ secrets.POSTGRES_DB }}?schema=fawredd_gym
+          DATABASE_URL=postgresql://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@localhost:5432/${{ secrets.POSTGRES_DB }}?schema=fawredd_gym
+          APP_DB_SCHEMA=fawredd_gym
+          REDIS_HOST=localhost
+          REDIS_PORT=6379
+          REDIS_PASSWORD=
+          REDIS_URL=redis://localhost:6379
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+          CLERK_SECRET_KEY=${{ secrets.CLERK_SECRET_KEY }}
+          OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY }}
+          NEXT_PUBLIC_APP_URL=http://localhost:3000
+          EOF
+          cp .env.ci .env
+
+      # --- Wait for services to be ready ---
+      - name: Wait for Postgres
+        run: |
+          npx wait-on tcp://localhost:5432 --timeout 60000
+
+      - name: Wait for Redis
+        run: |
+          npx wait-on tcp://localhost:6379 --timeout 60000
+
+      # --- Type checking ---
+      - name: Run TypeScript type check
+        run: pnpm exec tsc --noEmit
+
+      # --- Linting ---
+      - name: Run ESLint
+        run: pnpm run lint
+        continue-on-error: true # ESLint errors don't block the build
+
+      # --- Database schema validation (Drizzle) ---
+      - name: Validate database schema
+        run: pnpm exec drizzle-kit generate
+        env:
+          POSTGRES_URL: postgresql://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@localhost:5432/${{ secrets.POSTGRES_DB }}?schema=fawredd_gym
+
+      # --- Check that migrations are in sync with schema ---
+      - name: Verify schema consistency
+        run: |
+          # Check if any new migrations are detected
+          if [ -f db/migrations ]; then
+            echo "✓ Migrations directory exists"
+            ls -la db/migrations/ || echo "No migration files yet"
+          fi
+          # Run schema validation against generated migrations
+          pnpm exec drizzle-kit up --dialect postgresql
+        continue-on-error: true
+        env:
+          POSTGRES_URL: postgresql://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@localhost:5432/${{ secrets.POSTGRES_DB }}?schema=fawredd_gym
+
+      # --- Database migrations (if applicable for testing) ---
+      - name: Run database migrations
+        run: pnpm run db:push
+        env:
+          POSTGRES_URL: postgresql://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@localhost:5432/${{ secrets.POSTGRES_DB }}?schema=fawredd_gym
+
+      # --- Install Playwright Browsers (NEW) ---
+      - name: Install Playwright Browsers
+        run: pnpm exec playwright install --with-deps
+
+      # --- Seed Test Data (NEW) ---
+      - name: Seed test database for BDD tests
+        run: |
+          echo "Creating test data..."
+          PGPASSWORD=${{ secrets.POSTGRES_PASSWORD }} psql \
+            -h localhost \
+            -U ${{ secrets.POSTGRES_USER }} \
+            -d ${{ secrets.POSTGRES_DB }} \
+            -f tests/fixtures/seed.sql 2>/dev/null || echo "⚠ Warning: Seed file not yet available, skipping"
+
+      # --- RUN BDD TESTS - CRITICAL GATE (NEW) ---
+      - name: Run BDD Tests - Phase 3 Objective-Driven Features (CRITICAL)
+        id: bdd-tests
+        run: |
+          echo "Running Cucumber BDD tests with Playwright..."
+          NODE_ENV=test pnpm run test:bdd:ph3 2>&1 | tee bdd-test.log
+          BDD_EXIT_CODE=${PIPESTATUS[0]}
+          if [ $BDD_EXIT_CODE -eq 0 ]; then
+            echo "✓ All BDD scenarios passed!"
+          else
+            echo "✗ BDD tests FAILED - Pipeline will stop"
+          fi
+          exit $BDD_EXIT_CODE
+        env:
+          POSTGRES_URL: postgresql://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@localhost:5432/${{ secrets.POSTGRES_DB }}?schema=fawredd_gym
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
+        continue-on-error: false
+
+      # --- Run Playwright E2E Tests ---
+      - name: Run Playwright E2E Tests
+        run: pnpm exec playwright test 2>&1 | tee playwright-test.log
+        env:
+          POSTGRES_URL: postgresql://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@localhost:5432/${{ secrets.POSTGRES_DB }}?schema=fawredd_gym
+        continue-on-error: true
+
+      # --- Generate BDD Test Report (NEW) ---
+      - name: Generate BDD Test Report (HTML)
+        if: always()
+        run: |
+          if [ -f reports/cucumber-report.json ]; then
+            echo "Generating BDD report..."
+            pnpm exec cucumber-html-reporter \
+              -t "Phase 3 BDD Test Report - $(date +'%Y-%m-%d %H:%M')" \
+              -i reports/cucumber-report.json \
+              -o reports/cucumber-report.html 2>/dev/null || echo "⚠ HTML report generation skipped"
+          else
+            echo "⚠ No Cucumber report found, skipping HTML generation"
+          fi
+
+      # --- Run unit tests (placeholder) ---
+      - name: Run unit/integration tests
+        run: |
+          if [ -f "*.test.ts" ] || [ -f "*.test.tsx" ]; then
+            echo "Running test suite..."
+            pnpm run test:unit 2>&1 || echo "⚠ No unit tests configured yet"
+          else
+            echo "⚠ No unit test files found (.test.ts)"
+          fi
+        continue-on-error: true
+
+      # --- Build Next.js application ---
+      - name: Build Next.js application
+        run: pnpm run build
+        env:
+          POSTGRES_URL: postgresql://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@localhost:5432/${{ secrets.POSTGRES_DB }}?schema=fawredd_gym
+
+      # --- Upload Test Artifacts (NEW) ---
+      - name: Upload Test Reports & Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports-ph3-${{ github.run_id }}
+          path: |
+            reports/cucumber-report.html
+            reports/cucumber-report.json
+            playwright-report/
+            bdd-test.log
+            playwright-test.log
+          retention-days: 30
+
+      # --- ENFORCE BDD GATE: Fail Pipeline if Tests Failed (NEW) ---
+      - name: Enforce BDD Test Gate - Fail Pipeline if Scenarios Failed
+        if: steps.bdd-tests.outcome == 'failure'
+        run: |
+          echo "::error::❌ BDD Tests FAILED! Pipeline gates are enforced."
+          echo "::error::Review the test report and fix failing scenarios before merging."
+          exit 1
+
+      # --- Summary reporting ---
+      - name: CI Summary
+        if: always()
+        run: |
+          echo "========== CI PIPELINE SUMMARY =========="
+          echo "Status: ${{ job.status }}"
+          echo "Run ID: ${{ github.run_id }}"
+          echo "SHA: ${{ github.sha }}"
+          echo "=========================================="
+
+          if [ -f bdd-test.log ]; then
+            echo ""
+            echo "--- BDD Test Summary ---"
+            tail -20 bdd-test.log || echo "No BDD summary available"
+          fi
+
+          if [ -f playwright-test.log ]; then
+            echo ""
+            echo "--- Playwright Test Summary ---"
+            tail -10 playwright-test.log || echo "No Playwright summary available"
+          fi
+
+  # --- Failure Notification (Optional) ---
+  notify-on-failure:
+    runs-on: ubuntu-latest
+    needs: ci
+    if: failure()
+    steps:
+      - name: Notify Slack of CI Failure (Optional)
+        run: |
+          echo "To add Slack notifications, configure a Slack webhook in GitHub Secrets"
+          echo "Then uncomment the Slack notification action below"
+        # Uncomment when ready:
+        # - uses: slackapi/slack-github-action@v1
+        #   with:
+        #     payload: |
+        #       {
+        #         "text": "CI Pipeline Failed",
+        #         "blocks": [
+        #           {
+        #             "type": "section",
+        #             "text": {
+        #               "type": "mrkdwn",
+        #               "text": "❌ *CI Pipeline Failed*\nRun: ${{ github.run_id }}\nCheck: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        #             }
+        #           }
+        #         ]
+        #       }
+        #   env:
+        #     SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

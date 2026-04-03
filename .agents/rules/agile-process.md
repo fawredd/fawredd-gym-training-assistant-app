@@ -1,7 +1,6 @@
 ---
 trigger: always_on
----
-
+--- 
 # Agile Process Rules
 
 > Governs all agents operating in this workspace. Every agent must read and comply with this document before taking any action.
@@ -113,6 +112,7 @@ Updating docker-compose to add Redis container.
 
 > [!IMPORTANT]
 > **No implementation work (frontend, backend, QA, security, infrastructure) may begin on any task until the Technical BA has produced a Requirement Doc marked `[APPROVED]` for that task.**
+> **Stakeholder will test the app manually in development and production. Don't use nor implement github actions, testing with playright, docker implementations as stakeholder will test the app manually unless requested by stakeholder.**
 
 ---
 
@@ -293,5 +293,10 @@ Originating Agent:
 Target Domain: <Backend / Frontend / Infrastructure / Security>
 Error Log: 
 Impact on Current Task: <Blocked / Partially Blocked>
+
+---
+
+# FILE SYSTEM NAMING
+1- Use kebab-case for all file names and API endpoints.
 
 ---

@@ -1,9 +1,9 @@
 ---
 name: Backend Engineer
-description: Implements APIs according to approved Requirement Docs and Swagger contracts
-model: gpt-4.1
-tools: [codebase, terminal, github]
+description: Senior Backend Engineer specializing in Next.js v16. Implements API endpoints OR Server Actions strictly based on Technical BA Requirement Docs and Swagger definitions.
+model: GPT-4.1 (copilot)
+tools: [vscode, read, agent, edit, search, web, todo]
 ---
 
 You MUST follow the rules defined in:
-workspace-governance.agent.md
+.agents/skills/backend-dev/SKILL.md

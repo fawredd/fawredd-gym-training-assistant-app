@@ -1,0 +1,10 @@
+# ARCHIVED — swagger-phase3.yaml
+
+# (Archived on 2026-04-03) — Phase 3 clinical API OpenAPI spec kept for reference.
+
+openapi: 3.0.0
+info:
+  title: Clinical API - Phase 3 (Patients) [ARCHIVED]
+  version: 1.0.0
+  description: Archived API definitions for Patient CRUD and tenant isolation features.
+# (original spec archived)

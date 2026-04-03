@@ -1,0 +1,319 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "createdAt": "2026-04-03",
+    "purpose": "Test fixtures for Phase 3 BDD tests (Objective-Driven Training)",
+    "scope": "QA testing only - do NOT use in production"
+  },
+
+  "testUsers": [
+    {
+      "id": "user_test_001",
+      "clerkId": "clerk_test_001",
+      "email": "qatest+phase3@example.com",
+      "firstName": "QA",
+      "lastName": "Tester",
+      "goal": "Fuerza",
+      "description": "Primary test user for objective add/edit/persist flows"
+    },
+    {
+      "id": "user_test_002",
+      "clerkId": "clerk_test_002",
+      "email": "qatest+phase3+2@example.com",
+      "firstName": "Trainer",
+      "lastName": "Test",
+      "goal": "Hipertrofia",
+      "description": "Secondary test user for security (IDOR) and concurrent tests"
+    }
+  ],
+
+  "testObjectives": [
+    {
+      "id": "obj_test_001",
+      "userId": "user_test_001",
+      "content": "Run 5km without stopping",
+      "createdAt": "2026-03-27",
+      "updatedAt": "2026-04-02",
+      "daysOld": 7,
+      "testScenario": "Primary objective for cardio user"
+    },
+    {
+      "id": "obj_test_002",
+      "userId": "user_test_002",
+      "content": "Increase squat to 120kg",
+      "createdAt": "2026-03-20",
+      "updatedAt": "2026-04-03",
+      "daysOld": 14,
+      "testScenario": "Strength goal for user 2"
+    },
+    {
+      "id": "obj_test_003",
+      "userId": "user_test_001",
+      "content": "Lose 5kg in 3 months",
+      "createdAt": "2026-03-04",
+      "updatedAt": "2026-04-01",
+      "daysOld": 30,
+      "testScenario": "Historical objective (used for edit tests)"
+    }
+  ],
+
+  "testWorkouts": [
+    {
+      "id": "wo_test_001",
+      "userId": "user_test_001",
+      "date": "TODAY",
+      "durationMinutes": 45,
+      "exercises": [
+        {
+          "name": "Squat",
+          "type": "strength",
+          "sets": 5,
+          "reps": 5,
+          "weight": 100,
+          "unit": "kg"
+        },
+        {
+          "name": "Bench Press",
+          "type": "strength",
+          "sets": 4,
+          "reps": 8,
+          "weight": 85,
+          "unit": "kg"
+        },
+        {
+          "name": "Deadlift",
+          "type": "strength",
+          "sets": 3,
+          "reps": 3,
+          "weight": 120,
+          "unit": "kg"
+        }
+      ],
+      "aiSuggestedNext": "Excellent form on all sets. Next session: increase squat weight by 5kg.",
+      "hoursAgo": 2,
+      "testScenario": "Recent strength workout for AI context assembly"
+    },
+    {
+      "id": "wo_test_002",
+      "userId": "user_test_001",
+      "date": "TODAY - 2 days",
+      "durationMinutes": 20,
+      "exercises": [
+        {
+          "name": "Run",
+          "type": "cardio",
+          "duration": 1200,
+          "distance": 3.0,
+          "unit": "km"
+        }
+      ],
+      "aiSuggestedNext": "Great cardio session! Consider extending next run by 30 seconds.",
+      "daysAgo": 2,
+      "testScenario": "Cardio workout for cardio objective context"
+    },
+    {
+      "id": "wo_test_003",
+      "userId": "user_test_001",
+      "date": "TODAY - 7 days",
+      "durationMinutes": 60,
+      "exercises": [
+        { "name": "Pull-ups", "type": "strength", "sets": 4, "reps": 8 },
+        {
+          "name": "Barbell Rows",
+          "type": "strength",
+          "sets": 4,
+          "reps": 8,
+          "weight": 95,
+          "unit": "kg"
+        },
+        {
+          "name": "Barbell Curls",
+          "type": "strength",
+          "sets": 3,
+          "reps": 10,
+          "weight": 40,
+          "unit": "kg"
+        }
+      ],
+      "aiSuggestedNext": "Strong upper body day. Maintain current intensity.",
+      "daysAgo": 7,
+      "testScenario": "Historical workout for training state continuity"
+    },
+    {
+      "id": "wo_test_004",
+      "userId": "user_test_002",
+      "date": "TODAY",
+      "durationMinutes": 55,
+      "exercises": [
+        {
+          "name": "Squat",
+          "type": "strength",
+          "sets": 5,
+          "reps": 3,
+          "weight": 110,
+          "unit": "kg"
+        },
+        {
+          "name": "Front Squat",
+          "type": "strength",
+          "sets": 4,
+          "reps": 5,
+          "weight": 85,
+          "unit": "kg"
+        }
+      ],
+      "aiSuggestedNext": "Good progress toward 120kg squat goal. Keep building strength.",
+      "hoursAgo": 3,
+      "testScenario": "Strength-focused workout for user 2"
+    }
+  ],
+
+  "testTrainingStates": [
+    {
+      "id": "ts_test_001",
+      "userId": "user_test_001",
+      "workoutId": "wo_test_001",
+      "content": {
+        "progress": "25% toward 5km run goal",
+        "observations": "Great form on squat. Excellent technique maintained throughout all sets.",
+        "nextFocusAreas": "Increase load by 5kg when comfortable with current weight",
+        "coachingDirection": "Continue with current intensity, maintain consistency in form"
+      },
+      "hoursAgo": 2,
+      "testScenario": "Most recent training state (for AI context inclusion)"
+    },
+    {
+      "id": "ts_test_002",
+      "userId": "user_test_001",
+      "workoutId": "wo_test_002",
+      "content": {
+        "progress": "15% toward 5km run goal",
+        "observations": "Cardiovascular capacity steadily improving",
+        "nextFocusAreas": "Add 500m to next run",
+        "coachingDirection": "Maintain current pace, gradually increase distance"
+      },
+      "daysAgo": 2,
+      "testScenario": "Historical training state (for state evolution testing)"
+    },
+    {
+      "id": "ts_test_003",
+      "userId": "user_test_002",
+      "workoutId": "wo_test_004",
+      "content": {
+        "progress": "50% toward 120kg squat goal",
+        "observations": "Excellent form on main lifts. Safety check passed.",
+        "nextFocusAreas": "Work on depth on front squats",
+        "coachingDirection": "Add 2.5kg to main squat lifts next week"
+      },
+      "hoursAgo": 3,
+      "testScenario": "Training state for user 2 strength goal"
+    }
+  ],
+
+  "apiContextSamples": {
+    "aiContextWithObjective": {
+      "description": "Sample AI context payload when objective is present",
+      "userId": "user_test_001",
+      "trainingObjective": {
+        "id": "obj_test_001",
+        "content": "Run 5km without stopping",
+        "updatedAt": "2026-04-02T14:30:00Z"
+      },
+      "lastTrainings": [
+        {
+          "id": "wo_test_001",
+          "date": "2026-04-03",
+          "exercises": ["Squat", "Bench Press", "Deadlift"],
+          "duration": 45
+        },
+        {
+          "id": "wo_test_002",
+          "date": "2026-04-01",
+          "exercises": ["Run"],
+          "duration": 20
+        }
+      ],
+      "userGoal": "Fuerza",
+      "previousTrainingState": {
+        "id": "ts_test_001",
+        "progress": "25% toward 5km run goal",
+        "coachingDirection": "Continue with current intensity"
+      },
+      "previousInteraction": {
+        "type": "workout_submission",
+        "timestamp": "2026-04-03T12:45:00Z"
+      }
+    },
+    "aiContextWithoutObjective": {
+      "description": "Sample AI context when no objective exists (fallback behavior)",
+      "userId": "user_test_002",
+      "trainingObjective": null,
+      "lastTrainings": [
+        {
+          "id": "wo_test_004",
+          "date": "2026-04-03",
+          "exercises": ["Squat", "Front Squat"],
+          "duration": 55
+        }
+      ],
+      "userGoal": "Hipertrofia",
+      "previousTrainingState": null,
+      "previousInteraction": null
+    },
+    "aiResponseSample": {
+      "description": "Sample AI response with guidance and new training state",
+      "guidance": "Excellent strength work today! Your form was impeccable. For your next session, consider increasing weight by 5kg on the squat to continue building toward your 120kg goal.",
+      "trainingState": {
+        "progress": "55% toward 120kg squat goal",
+        "observations": "Form is consistent. Ready for progressive overload.",
+        "nextFocusAreas": "Front squat depth and control",
+        "coachingDirection": "Increase main squat by 2.5kg next week"
+      }
+    }
+  },
+
+  "testScenarioMatrix": {
+    "happy_path": [
+      "Add objective → Objective displays on dashboard",
+      "Edit objective → Changes persist in database",
+      "Submit workout → AI context includes objective",
+      "AI response → New training state created",
+      "Multiple sessions → Training state evolves"
+    ],
+    "edge_cases": [
+      "Empty/whitespace objective → Validation error",
+      "Objective >500 chars → Truncated or rejected",
+      "Special chars in objective → Sanitized correctly",
+      "Edit with no changes → Idempotent behavior",
+      "No objective existing → Fallback AI behavior"
+    ],
+    "security": [
+      "User A cannot see User B's objective (403)",
+      "Unauthorized request → 401 Unauthorized",
+      "XSS attempt in objective → Sanitized",
+      "Rate limiting on CRUD → 429 after X requests"
+    ],
+    "integration": [
+      "Dashboard aggregation includes objective + state",
+      "Cache invalidated on objective update",
+      "Cache key includes objective hash"
+    ]
+  },
+
+  "localTestCommands": {
+    "seedData": "PGPASSWORD=password psql -h localhost -U postgres -d fawredd_gym -f tests/fixtures/seed.sql",
+    "runAllPhase3BDD": "pnpm run test:bdd:ph3",
+    "runSpecificScenario": "cucumber-js .agents/artifacts/tests/PH3-OBJECTIVE-TRAINING-tests.feature --name 'User successfully adds objective'",
+    "runWithTag": "cucumber-js .agents/artifacts/tests/PH3-OBJECTIVE-TRAINING-tests.feature --tags '@security'",
+    "runParallel": "cucumber-js .agents/artifacts/tests/PH3-OBJECTIVE-TRAINING-tests.feature --parallel 3",
+    "generateReport": "pnpm run test:report"
+  },
+
+  "notes": {
+    "createdBy": "QA Engineer (BDD Specialist)",
+    "reviewedWith": "Acceptance Criteria from agents-phase-3-requirements.md",
+    "coverage": "28+ Gherkin scenarios covering all 5 acceptance criteria",
+    "frameworks": "Cucumber.js + Playwright v1.40+",
+    "lastUpdated": "2026-04-03"
+  }
+}

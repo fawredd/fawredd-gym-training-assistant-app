@@ -1,73 +1,134 @@
-import { pgSchema, text, timestamp, integer, pgEnum } from "drizzle-orm/pg-core";
-import { relations } from 'drizzle-orm';
+import {
+  pgSchema,
+  text,
+  timestamp,
+  integer,
+  pgEnum,
+} from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 
 export const fawreddGymSchema = pgSchema("fawredd_gym");
 
-export const objectiveEnum = fawreddGymSchema.enum("objetivo", ["hipertrofia", "fuerza", "mantenimiento"]);
-export const experienceEnum = fawreddGymSchema.enum("experiencia", ["principiante", "intermedio", "avanzado"]);
+export const objectiveEnum = fawreddGymSchema.enum("objetivo", [
+  "hipertrofia",
+  "fuerza",
+  "mantenimiento",
+]);
+export const experienceEnum = fawreddGymSchema.enum("experiencia", [
+  "principiante",
+  "intermedio",
+  "avanzado",
+]);
 
 export const users = fawreddGymSchema.table("users", {
-    id: text("id").primaryKey(),
-    externalAuthId: text("external_auth_id").notNull().unique(),
-    nombre: text("nombre"),
-    edad: integer("edad"),
-    peso: integer("peso"),
-    altura: integer("altura"),
-    objetivo: objectiveEnum("objetivo"),
-    experiencia: experienceEnum("experiencia"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  id: text("id").primaryKey(),
+  externalAuthId: text("external_auth_id").notNull().unique(),
+  nombre: text("nombre"),
+  edad: integer("edad"),
+  peso: integer("peso"),
+  altura: integer("altura"),
+  objetivo: objectiveEnum("objetivo"),
+  experiencia: experienceEnum("experiencia"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const workouts = fawreddGymSchema.table("workouts", {
-    id: text("id").primaryKey(),
-    userId: text("user_id").notNull().references(() => users.id),
-    fecha: timestamp("fecha").notNull(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id),
+  fecha: timestamp("fecha").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const workoutExercises = fawreddGymSchema.table("workout_exercises", {
-    id: text("id").primaryKey(),
-    workoutId: text("workout_id").notNull().references(() => workouts.id, { onDelete: 'cascade' }),
-    nombre: text("nombre").notNull(),
-    series: integer("series").default(1),
-    repeticiones: integer("repeticiones").default(0),
-    peso: integer("peso").default(0),
-    duracionSegundos: integer("duracion_segundos").default(0),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
+  id: text("id").primaryKey(),
+  workoutId: text("workout_id")
+    .notNull()
+    .references(() => workouts.id, { onDelete: "cascade" }),
+  nombre: text("nombre").notNull(),
+  series: integer("series").default(1),
+  repeticiones: integer("repeticiones").default(0),
+  peso: integer("peso").default(0),
+  duracionSegundos: integer("duracion_segundos").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // Relations for easier Drizzle queries
 export const workoutsRelations = relations(workouts, ({ many }) => ({
-    exercises: many(workoutExercises),
+  exercises: many(workoutExercises),
 }));
 
-export const workoutExercisesRelations = relations(workoutExercises, ({ one }) => ({
+export const workoutExercisesRelations = relations(
+  workoutExercises,
+  ({ one }) => ({
     workout: one(workouts, {
-        fields: [workoutExercises.workoutId],
-        references: [workouts.id],
+      fields: [workoutExercises.workoutId],
+      references: [workouts.id],
     }),
-}));
+  }),
+);
 
 export const aiMemories = fawreddGymSchema.table("ai_memories", {
-    id: text("id").primaryKey(),
-    userId: text("user_id").notNull().references(() => users.id),
-    fecha: timestamp("fecha").notNull().defaultNow(),
-    contenido: text("contenido").notNull(),
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id),
+  fecha: timestamp("fecha").notNull().defaultNow(),
+  contenido: text("contenido").notNull(),
 });
 
 export const aiLogs = fawreddGymSchema.table("ai_logs", {
-    id: text("id").primaryKey(),
-    userId: text("user_id").references(() => users.id),
-    requestPayload: text("request_payload"),
-    responsePayload: text("response_payload"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
+  id: text("id").primaryKey(),
+  userId: text("user_id").references(() => users.id),
+  requestPayload: text("request_payload"),
+  responsePayload: text("response_payload"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const AiMemoriesRelations = relations(aiMemories, ({ one }) => ({
+  user: one(users, {
+    fields: [aiMemories.userId],
+    references: [users.id],
+  }),
+}));
+
+export const trainingObjectives = fawreddGymSchema.table(
+  "training_objectives",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id),
+    content: text("content").notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+);
+
+export const trainingStates = fawreddGymSchema.table("training_states", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const TrainingObjectivesRelations = relations(
+  trainingObjectives,
+  ({ one }) => ({
     user: one(users, {
-        fields: [aiMemories.userId],
-        references: [users.id],
+      fields: [trainingObjectives.userId],
+      references: [users.id],
     }),
+  }),
+);
+
+export const TrainingStatesRelations = relations(trainingStates, ({ one }) => ({
+  user: one(users, {
+    fields: [trainingStates.userId],
+    references: [users.id],
+  }),
 }));
