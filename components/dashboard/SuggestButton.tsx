@@ -29,9 +29,18 @@ export function SuggestButton() {
       }
 
       const content = data?.contenido ?? data?.memory ?? data ?? null;
-      setMessage(
-        typeof content === "string" ? content : JSON.stringify(content),
-      );
+      const parsed =
+        typeof content === "string" ? content : JSON.stringify(content);
+      setMessage(parsed);
+      try {
+        window.dispatchEvent(
+          new CustomEvent("ai:suggestion", {
+            detail: { contenido: parsed, fecha: new Date().toISOString() },
+          }),
+        );
+      } catch (e) {
+        // ignore
+      }
     } catch (err) {
       setMessage("Error de red");
     } finally {

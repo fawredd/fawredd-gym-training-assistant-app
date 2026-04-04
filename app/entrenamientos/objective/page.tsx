@@ -31,7 +31,10 @@ function EditableObjectiveForm({ initial }: { initial: string | null }) {
   };
 
   return (
-    <form onSubmit={handleSave} className="max-w-lg mx-auto p-4 md:p-8">
+    <form
+      onSubmit={handleSave}
+      className="w-full px-4 md:px-8 max-w-3xl mx-auto"
+    >
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">
           {initial ? "Editar objetivo" : "Agregar objetivo"}

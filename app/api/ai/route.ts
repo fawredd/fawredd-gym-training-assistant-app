@@ -41,7 +41,7 @@ export async function POST() {
   try {
     const rateLimitKey = `rl_ai_${existingUser.id}`;
     const lastGenerated = await kv.get<number>(rateLimitKey);
-    const twelveHoursInMs = 12 * 60 * 60 * 1000;
+    const twelveHoursInMs = 1 * 60 * 60 * 1000; //Modify to 1hr for testing
     if (lastGenerated && Date.now() - lastGenerated < twelveHoursInMs) {
       return new NextResponse("Rate limit exceeded. Please wait 12h.", {
         status: 429,

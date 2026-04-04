@@ -198,7 +198,6 @@ export default async function DashboardPage() {
           </div>
 
           <MainCta />
-          <SuggestButton />
           <DailyStatus
             trainedToday={trainedToday}
             lastAiSnippet={latestMemory?.contenido ?? null}
@@ -212,6 +211,7 @@ export default async function DashboardPage() {
             contenido={latestMemory?.contenido ?? null}
             fecha={latestMemory?.fecha ?? null}
           />
+          <SuggestButton />
         </main>
       </div>
     </ThemeProvider>
