@@ -12,6 +12,7 @@ import { eq, desc, gte, and } from "drizzle-orm";
 import { ThemeProvider } from "@/components/dashboard/ThemeProvider";
 import { Header } from "@/components/dashboard/Header";
 import { MainCta } from "@/components/dashboard/MainCta";
+import { SuggestButton } from "@/components/dashboard/SuggestButton";
 import { DailyStatus } from "@/components/dashboard/DailyStatus";
 import { TrainingCalendar } from "@/components/dashboard/TrainingCalendar";
 import { WeeklySummary } from "@/components/dashboard/WeeklySummary";
@@ -197,6 +198,7 @@ export default async function DashboardPage() {
           </div>
 
           <MainCta />
+          <SuggestButton />
           <DailyStatus
             trainedToday={trainedToday}
             lastAiSnippet={latestMemory?.contenido ?? null}
