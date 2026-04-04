@@ -42,14 +42,15 @@ Below are the recommended Phase 3 tasks. Per Workspace Governance, open a separa
 
 ## Triage Queue (from QA)
 
-| ID          | Title                                                                 | Status | Assignee          | Priority | Dependencies |
-| ----------- | --------------------------------------------------------------------- | ------ | ----------------- | -------- | ------------ |
-| DASH-002-F1 | Triage: Create `/entrenamientos/[id]/edit` page                       | DONE   | PM                | HIGH     | DASH-002     |
-| DASH-002-F2 | Triage: Create `/entrenamientos/new` page with `baseId` query support | DONE   | PM                | HIGH     | DASH-002     |
-| DASH-002-F3 | Triage: Add delete workout/exercise button to frontend                | DONE   | PM                | HIGH     | DASH-002     |
-| DASH-002-F4 | Fix hardcoded colors in `entrenamientos/page.tsx` for dark mode       | TODO   | Frontend Engineer | MEDIUM   | DASH-002     |
-| DASH-002-F5 | Cleanup: delete orphaned `AiSuggestion.tsx`                           | TODO   | Frontend Engineer | LOW      | DASH-002     |
-| DASH-002-F6 | Refactor: extract `classifyExercise` to `lib/`                        | TODO   | Frontend Engineer | LOW      | DASH-002     |
+| ID           | Title                                                                 | Status  | Assignee          | Priority | Dependencies |
+| ------------ | --------------------------------------------------------------------- | ------- | ----------------- | -------- | ------------ |
+| DASH-002-F1  | Triage: Create `/entrenamientos/[id]/edit` page                       | DONE    | PM                | HIGH     | DASH-002     |
+| DASH-002-F2  | Triage: Create `/entrenamientos/new` page with `baseId` query support | DONE    | PM                | HIGH     | DASH-002     |
+| DASH-002-F3  | Triage: Add delete workout/exercise button to frontend                | DONE    | PM                | HIGH     | DASH-002     |
+| DASH-002-F4  | Fix hardcoded colors in `entrenamientos/page.tsx` for dark mode       | TODO    | Frontend Engineer | MEDIUM   | DASH-002     |
+| DASH-002-F5  | Cleanup: delete orphaned `AiSuggestion.tsx`                           | TODO    | Frontend Engineer | LOW      | DASH-002     |
+| DASH-002-F6  | Refactor: extract `classifyExercise` to `lib/`                        | TODO    | Frontend Engineer | LOW      | DASH-002     |
+| TRG-NEON-001 | Triage: DB ETIMEDOUT on users query (Neon pool)                       | BLOCKED | PM                | HIGH     | INF-001      |
 
 ## Audit Findings Backlog (auto-generated)
 

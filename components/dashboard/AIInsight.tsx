@@ -5,7 +5,7 @@ import { SuggestButton } from "./SuggestButton";
 
 interface AIInsightProps {
   contenido: string | null;
-  fecha: Date | null;
+  fecha: string | null;
 }
 
 export function AIInsight({
@@ -15,7 +15,9 @@ export function AIInsight({
   const [contenido, setContenido] = useState<string | null>(
     initialContenido ?? null,
   );
-  const [fecha, setFecha] = useState<Date | null>(initialFecha ?? null);
+  const [fecha, setFecha] = useState<Date | null>(
+    initialFecha ? new Date(initialFecha) : null,
+  );
 
   useEffect(() => {
     const handler = (ev: Event) => {
