@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { SuggestButton } from "./SuggestButton";
 
 interface AIInsightProps {
   contenido: string | null;
@@ -63,6 +64,8 @@ export function AIInsight({
           primera recomendación.
         </p>
       )}
+      {/* Suggest button shown only inside AIInsight */}
+      <SuggestButton />
     </div>
   );
 }

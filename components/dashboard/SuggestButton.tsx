@@ -20,7 +20,7 @@ export function SuggestButton() {
         setMessage(`Error: ${txt}`);
         return;
       }
-      // Try to parse JSON, but fall back to text
+      // Try to parse JSON, fall back to text
       let data: any;
       try {
         data = await res.json();
@@ -29,8 +29,40 @@ export function SuggestButton() {
       }
 
       const content = data?.contenido ?? data?.memory ?? data ?? null;
-      const parsed =
-        typeof content === "string" ? content : JSON.stringify(content);
+
+      // If content is a string that looks like JSON, parse it to show readable text
+      let parsed: string | null = null;
+      if (typeof content === "string") {
+        const txt = content.trim();
+        if (txt.startsWith("{") || txt.startsWith("[")) {
+          try {
+            const obj = JSON.parse(txt);
+            // Prefer common text fields if present
+            parsed =
+              obj?.contenido ||
+              obj?.content ||
+              obj?.message ||
+              obj?.text ||
+              // Fallback: pretty-print object to multiple lines
+              JSON.stringify(obj, null, 2);
+          } catch (e) {
+            parsed = content;
+          }
+        } else {
+          parsed = content;
+        }
+      } else if (typeof content === "object" && content !== null) {
+        // Prefer obvious text fields
+        parsed =
+          content?.contenido ||
+          content?.content ||
+          content?.message ||
+          content?.text ||
+          JSON.stringify(content, null, 2);
+      } else {
+        parsed = content ? String(content) : null;
+      }
+
       setMessage(parsed);
       try {
         window.dispatchEvent(

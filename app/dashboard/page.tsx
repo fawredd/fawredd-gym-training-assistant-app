@@ -12,8 +12,7 @@ import { eq, desc, gte, and } from "drizzle-orm";
 import { ThemeProvider } from "@/components/dashboard/ThemeProvider";
 import { Header } from "@/components/dashboard/Header";
 import { MainCta } from "@/components/dashboard/MainCta";
-import { SuggestButton } from "@/components/dashboard/SuggestButton";
-import { DailyStatus } from "@/components/dashboard/DailyStatus";
+//import { DailyStatus } from "@/components/dashboard/DailyStatus";
 import { TrainingCalendar } from "@/components/dashboard/TrainingCalendar";
 import { WeeklySummary } from "@/components/dashboard/WeeklySummary";
 import { AIInsight } from "@/components/dashboard/AIInsight";
@@ -198,10 +197,15 @@ export default async function DashboardPage() {
           </div>
 
           <MainCta />
+          
+          {/* 
+          //DISABLED DAILY STATUS FOR NOW - NEEDS REWORK
           <DailyStatus
             trainedToday={trainedToday}
             lastAiSnippet={latestMemory?.contenido ?? null}
-          />
+          /> 
+          */}
+
           <TrainingCalendar workoutsByDate={workoutsByDate} />
           <WeeklySummary
             muscleGroups={muscleGroups}
@@ -211,7 +215,7 @@ export default async function DashboardPage() {
             contenido={latestMemory?.contenido ?? null}
             fecha={latestMemory?.fecha ?? null}
           />
-          <SuggestButton />
+          {/* SuggestButton moved into AIInsight to centralize AI UI */}
         </main>
       </div>
     </ThemeProvider>
