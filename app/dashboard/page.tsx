@@ -180,13 +180,14 @@ export default async function DashboardPage() {
       <div className="min-h-screen bg-background text-foreground flex flex-col">
         <Header userName={userName} />
         <main className="flex flex-col gap-5 pb-10 pt-4 max-w-lg mx-auto w-full">
-          <Accordion className="w-full bg-transparent border">
+          <div className="mx-4 md:mx-8">
+          <Accordion className="bg-transparent border">
             <AccordionItem value="1">
               <AccordionTrigger>
                 Objetivo planteado{" "}
-                {(latestObjective?.content && (
+                { latestObjective?.content && (
                   <Check className="text-green-500" />
-                )) || <X className="text-red-500" />}
+                ) || (<X className="text-red-500" />)}
               </AccordionTrigger>
               <AccordionContent>
                 {/* ObjectiveCard rendered inline */}
@@ -219,6 +220,7 @@ export default async function DashboardPage() {
               </AccordionContent>
             </AccordionItem>
           </Accordion>
+          </div>
 
           <MainCta />
 

@@ -1,24 +1,7 @@
 "use client";
 
-import { AIResponse, parseAIResponse } from "@/lib/ai-response";
+import { AIResponse, formatAIResponseForUI } from "@/lib/ai-response";
 import React, { useState } from "react";
-
-function formatAIResponseForUI(data: AIResponse): string {
-  const ejercicios = data.rutina.ejercicios
-    .map(
-      (ex) => `• ${ex.nombre}: ${ex.series}x${ex.reps}`
-    )
-    .join("\n");
-
-  return `${data.resumen}
-
-Rutina del día:
-Grupo: ${data.rutina.grupo}
-${data.rutina.justificacion}
-
-Ejercicios:
-${ejercicios}`;
-}
 
 export function SuggestButton() {
   const [loading, setLoading] = useState(false);
@@ -27,39 +10,34 @@ export function SuggestButton() {
   async function handleClick() {
     setLoading(true);
     setMessage(null);
-      try {
-        const res = await fetch("/api/ai", { method: "POST" });
+    try {
+      const res = await fetch("/api/ai", { method: "POST" });
 
-        if (res.status === 429) {
-          setMessage("Límite de solicitudes alcanzado");
-          return;
-        }
+      if (res.status === 429) {
+        setMessage("Límite de solicitudes alcanzado");
+        return;
+      }
 
-        if (!res.ok) {
-          const txt = await res.text();
-          setMessage(`Error: ${txt}`);
-          return;
-        }
+      if (!res.ok) {
+        const txt = await res.text();
+        setMessage(`Error: ${txt}`);
+        return;
+      }
 
-        const text = await res.text();
+      const parsed = (await res.json()) as AIResponse;
+      const contenido = formatAIResponseForUI(parsed);
 
-        const parsed = parseAIResponse(text);
-
-        const contenido = parsed
-          ? formatAIResponseForUI(parsed)
-          : text
-
-        window.dispatchEvent(
-          new CustomEvent("ai:suggestion", {
-            detail: {
-              contenido,
-              fecha: new Date().toISOString(),
-            },
-          })
-        );
-      } catch (e) {
-        setMessage("Error inesperado");
-      } finally {
+      window.dispatchEvent(
+        new CustomEvent("ai:suggestion", {
+          detail: {
+            contenido,
+            fecha: new Date().toISOString(),
+          },
+        }),
+      );
+    } catch (e) {
+      setMessage("Error inesperado");
+    } finally {
       setLoading(false);
     }
   }

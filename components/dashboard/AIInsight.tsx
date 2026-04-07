@@ -20,12 +20,21 @@ export function AIInsight({
   );
 
   useEffect(() => {
+    interface MiEventoDetail {
+      contenido: string | null;
+      fecha: string | null;
+    }
     const handler = (ev: Event) => {
-      // Event can be CustomEvent with detail { contenido, fecha }
-      const custom = ev as CustomEvent;
-      const detail = custom?.detail as any;
-      if (!detail) return;
-      setContenido(JSON.parse(detail.contenido) ?? null);
+      const custom = ev as CustomEvent<MiEventoDetail>;
+      const detail = custom.detail;
+
+      // Si detail no existe o no tiene la estructura, salimos
+      if (!detail) { 
+        console.log("Evento recibido sin detalle válido:", ev);
+        return;
+      }
+
+      setContenido(detail.contenido ?? null);
       setFecha(detail.fecha ? new Date(detail.fecha) : new Date());
     };
 

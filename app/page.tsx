@@ -7,7 +7,7 @@ export default async function Home() {
   if (userId) redirect("/dashboard");
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen px-4">
+    <div className="flex flex-col items-center justify-center min-h-screen px-4 m-4">
       <div className="max-w-xl w-full text-center space-y-8 mt-[-10vh]">
         <div className="space-y-4">
           <h1 className="text-4xl font-extrabold sm:text-6xl pb-2">

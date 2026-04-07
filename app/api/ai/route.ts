@@ -156,7 +156,7 @@ IMPORTANT:
     });
 
     // Try to extract a JSON training_state from the AI output
-
+    console.log("Raw AI response:", JSON.stringify(text));
     const parsed = parseAIResponse(text);
 
     const trainingState: TrainingState | null = parsed?.training_state ?? null;
@@ -180,8 +180,10 @@ IMPORTANT:
       console.warn("Failed to persist training state", e);
     }
     if (parsed) {
-     return NextResponse.json(parsed);
-}
+      console.log("Parsed AI response:", JSON.stringify(parsed));
+      return NextResponse.json(parsed);
+    } 
+    return new NextResponse("AI response could not be parsed", { status: 422 });
   } catch (error) {
     console.error("AI Generation failed", error);
 
