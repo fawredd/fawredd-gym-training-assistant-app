@@ -13,7 +13,7 @@ export default async function EditWorkoutPage({
 }) {
     const { id } = await params;
     const { userId } = await auth();
-    if (!userId) redirect("/sign-in");
+    if (!userId) redirect("/");
 
     const existingUser = await db.query.users.findFirst({
         where: eq(users.externalAuthId, userId),

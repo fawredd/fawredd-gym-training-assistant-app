@@ -1,3 +1,6 @@
+import { ChartData } from "@/lib/muscleGraphData";
+import MiniProgressChart from "./MiniProgressChart";
+
 interface MuscleGroup {
     nombre: string;
     dias: number;
@@ -6,12 +9,13 @@ interface MuscleGroup {
 interface WeeklySummaryProps {
     muscleGroups: MuscleGroup[]; // sorted desc
     totalDays: number; // out of 7
+    chartData: ChartData; // for potential future use in a graph
 }
 
 // Map of keywords in exercise names → muscle group labels
 // This is used in the dashboard page to classify exercises on the server.
 
-export function WeeklySummary({ muscleGroups, totalDays }: WeeklySummaryProps) {
+export function WeeklySummary({ muscleGroups, totalDays, chartData }: WeeklySummaryProps) {
     const top = muscleGroups[0];
     const least = muscleGroups[muscleGroups.length - 1];
 
@@ -34,6 +38,7 @@ export function WeeklySummary({ muscleGroups, totalDays }: WeeklySummaryProps) {
                         <tr className="text-left text-xs text-muted-foreground uppercase tracking-wide border-b border-border">
                             <th className="pb-2 font-medium">Grupo muscular</th>
                             <th className="pb-2 font-medium text-right">Días</th>
+                            <th className="pb-2 font-medium text-right">Evolución</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
@@ -41,6 +46,9 @@ export function WeeklySummary({ muscleGroups, totalDays }: WeeklySummaryProps) {
                             <tr key={mg.nombre}>
                                 <td className="py-2 font-medium capitalize">{mg.nombre}</td>
                                 <td className="py-2 text-right tabular-nums">{mg.dias}</td>
+                                <td className="py-2 text-right tabular-nums">
+                                    <MiniProgressChart data={chartData[mg.nombre]} />
+                                </td>
                             </tr>
                         ))}
                     </tbody>

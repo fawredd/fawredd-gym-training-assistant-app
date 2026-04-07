@@ -49,7 +49,7 @@ export default async function EntrenamientosPage() {
       <div className="max-w-5xl w-full p-4 md:p-8">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-semibold text-primary">
-            Mis Entrenamientos
+            Carga de entrenamientos
           </h1>
           <Link
             href="/dashboard"
@@ -58,7 +58,7 @@ export default async function EntrenamientosPage() {
             ← Volver
           </Link>
         </div>
-        <Accordion multiple defaultValue={['1']} className="w-full bg-background">
+        <Accordion defaultValue={['1']} className="w-full bg-background">
           <AccordionItem value="1">
             <AccordionTrigger className="data-[state=open]:bg-background">Carga Manual</AccordionTrigger>
             <AccordionContent className="data-[state=open]:bg-background">
@@ -76,12 +76,6 @@ export default async function EntrenamientosPage() {
             <AccordionContent>
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-semibold">Historial</h2>
-                <Link
-                  href="/entrenamientos/new"
-                  className="text-sm text-primary font-medium hover:underline"
-                >
-                  + Nuevo
-                </Link>
               </div>
 
               <div className="space-y-4">

@@ -8,7 +8,6 @@ const isProtectedRoute = createRouteMatcher([
 
 export default clerkMiddleware(async (auth, req) => {
     if (isProtectedRoute(req)) {
-        console.log(`Accessing protected route: ${req.nextUrl.pathname}`);
         await auth.protect();
     }
 });

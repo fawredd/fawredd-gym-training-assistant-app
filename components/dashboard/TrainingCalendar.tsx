@@ -12,14 +12,19 @@ interface Exercise {
   duracionSegundos: number | null;
 }
 
-interface WorkoutDay {
+interface Workout {
   id: string;
-  fecha: string; // ISO string
+  createdAt: string;
+  updatedAt: string;
+  userId: string;
+  fecha: string;
   exercises: Exercise[];
 }
 
+type WorkoutsByDate = Record<string, Workout[]>;
+
 interface TrainingCalendarProps {
-  workoutsByDate: Record<string, WorkoutDay>; // key: "YYYY-MM-DD"
+  workoutsByDate: WorkoutsByDate; // key: "YYYY-MM-DD"
 }
 
 function formatDate(date: Date): string {
@@ -29,7 +34,7 @@ function formatDate(date: Date): string {
 const DAY_LABELS = ["Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sá"];
 
 export function TrainingCalendar({ workoutsByDate }: TrainingCalendarProps) {
-  const [selectedWorkout, setSelectedWorkout] = useState<WorkoutDay | null>(
+  const [selectedWorkout, setSelectedWorkout] = useState<WorkoutsByDate[string] | null>(
     null,
   );
   const [emptyDay, setEmptyDay] = useState<string | null>(null);
@@ -53,26 +58,26 @@ export function TrainingCalendar({ workoutsByDate }: TrainingCalendarProps) {
       <div className="grid grid-cols-5 gap-2">
         {days.map((day) => {
           const key = formatDate(day);
-          const workout = workoutsByDate[key];
+          const workouts = workoutsByDate[key];
           const isToday = key === todayStr;
 
           return (
             <button
               key={key}
               onClick={() => {
-                if (workout) {
-                  setSelectedWorkout(workout);
+                if (workouts) {
+                  setSelectedWorkout(workouts);
                 } else {
                   setEmptyDay(key);
                 }
               }}
               className={[
                 "flex flex-col items-center justify-center rounded-xl py-2.5 px-1 transition-all",
-                workout
+                workouts
                   ? "bg-primary text-primary-foreground shadow-sm active:scale-95"
                   : "bg-muted text-muted-foreground",
-                isToday && !workout ? "ring-2 ring-primary ring-offset-1" : "",
-                isToday && workout ? "ring-2 ring-white ring-offset-1" : "",
+                isToday && !workouts ? "ring-2 ring-primary ring-offset-1" : "",
+                isToday && workouts ? "ring-2 ring-white ring-offset-1" : "",
               ]
                 .filter(Boolean)
                 .join(" ")}
@@ -81,14 +86,14 @@ export function TrainingCalendar({ workoutsByDate }: TrainingCalendarProps) {
                 {DAY_LABELS[day.getDay()]}
               </span>
               <span className="text-sm font-bold">{day.getDate()}</span>
-              {workout && <span className="text-[10px] mt-0.5">✓</span>}
+              {workouts && <span className="text-[10px] mt-0.5">✓</span>}
             </button>
           );
         })}
       </div>
 
       {/* Modal */}
-      {selectedWorkout && (
+      {selectedWorkout && selectedWorkout.length > 0 && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
           {/* Backdrop */}
           <div
@@ -99,7 +104,7 @@ export function TrainingCalendar({ workoutsByDate }: TrainingCalendarProps) {
           <div className="relative z-10 w-full max-w-md bg-card rounded-t-3xl sm:rounded-2xl shadow-2xl p-6 flex flex-col gap-4 max-h-[80vh] overflow-y-auto">
             <div className="flex items-center justify-between">
               <h3 className="font-bold text-lg">
-                {new Date(selectedWorkout.fecha).toLocaleDateString("es-AR", {
+                {new Date(selectedWorkout[0].fecha).toLocaleDateString("es-AR", {
                   weekday: "long",
                   day: "numeric",
                   month: "long",
@@ -114,48 +119,45 @@ export function TrainingCalendar({ workoutsByDate }: TrainingCalendarProps) {
               </button>
             </div>
 
-            {/* Exercise list */}
-            {selectedWorkout.exercises.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Sin ejercicios registrados.
-              </p>
-            ) : (
-              <ul className="divide-y divide-border">
-                {selectedWorkout.exercises.map((ex) => (
-                  <li
-                    key={ex.id}
-                    className="py-2.5 flex justify-between items-start gap-2"
-                  >
-                    <span className="font-medium text-sm leading-tight">
-                      {ex.nombre}
-                    </span>
-                    <span className="text-xs text-muted-foreground shrink-0">
-                      {ex.duracionSegundos && ex.duracionSegundos > 0
-                        ? `${ex.duracionSegundos}s`
-                        : `${ex.series ?? 1}×${ex.repeticiones ?? 0}${ex.peso ? ` @ ${ex.peso}kg` : ""}`}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            {/* Actions */}
-            <div className="flex flex-col gap-2 pt-2">
-              <Link
-                href={`/entrenamientos/${selectedWorkout.id}/edit`}
-                className="flex items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground py-3 font-semibold text-sm active:scale-95 transition-transform"
-                onClick={() => setSelectedWorkout(null)}
-              >
-                ✏️ Editar entrenamiento
-              </Link>
-              <Link
-                href={`/entrenamientos/new?baseId=${selectedWorkout.id}`}
-                className="flex items-center justify-center gap-2 rounded-xl border border-border py-3 font-semibold text-sm active:scale-95 transition-transform hover:bg-muted"
-                onClick={() => setSelectedWorkout(null)}
-              >
-                📋 Usar como base
-              </Link>
-            </div>
+            { selectedWorkout.map((w)=>{
+              return (
+                    w.exercises.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      Sin ejercicios registrados.
+                    </p>
+                  ) : (
+                    <>
+                    <ul className="divide-y divide-border">
+                      {w.exercises.map((ex) => (
+                        <li
+                          key={ex.id}
+                          className="py-2.5 flex justify-between items-start gap-2"
+                        >
+                          <span className="font-medium text-sm leading-tight">
+                            {ex.nombre}
+                          </span>
+                          <span className="text-xs text-muted-foreground shrink-0">
+                            {ex.duracionSegundos && ex.duracionSegundos > 0
+                              ? `${ex.duracionSegundos}s`
+                              : `${ex.series ?? 1}×${ex.repeticiones ?? 0}${ex.peso ? ` @ ${ex.peso}kg` : ""}`}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  <div className="flex flex-col gap-2 pt-2">
+                    <Link
+                      href={`/entrenamientos/${w.id}/edit`}
+                      className="flex items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground py-3 font-semibold text-sm active:scale-95 transition-transform"
+                      onClick={() => setSelectedWorkout(null)}
+                    >
+                      ✏️ Editar entrenamiento
+                    </Link>
+                  </div>
+                  </>
+                  )
+                )
+              })
+            }
           </div>
         </div>
       )}
@@ -188,7 +190,7 @@ export function TrainingCalendar({ workoutsByDate }: TrainingCalendarProps) {
             </p>
             <div className="flex flex-col gap-2 pt-2">
               <Link
-                href={`/entrenamientos/new?date=${emptyDay}`}
+                href={`/entrenamientos/?date=${emptyDay}`}
                 className="flex items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground py-3 font-semibold text-sm active:scale-95 transition-transform"
                 onClick={() => setEmptyDay(null)}
               >

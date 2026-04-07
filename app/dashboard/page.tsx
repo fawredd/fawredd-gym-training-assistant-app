@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/accordion";
 import { Check, X } from "lucide-react";
 import { redirect } from "next/navigation";
+import { buildChartData } from "@/lib/muscleGraphData";
 
 function formatDateKey(date: Date): string {
   return date.toISOString().split("T")[0];
@@ -86,37 +87,47 @@ export default async function DashboardPage() {
   });
 
   // ── Build workoutsByDate map for calendar ────────────────────────────
-  const workoutsByDate: Record<
-    string,
-    {
-      id: string;
-      fecha: string;
-      exercises: {
-        id: string;
-        nombre: string;
-        series: number | null;
-        repeticiones: number | null;
-        peso: number | null;
-        duracionSegundos: number | null;
-      }[];
-    }
-  > = {};
+  // DB (server)
+  type DbWorkout = (typeof recentWorkouts)[number];
+  type DbExercise = DbWorkout["exercises"][number];
+
+  type Exercise = Omit<DbExercise, "createdAt">;
+  interface Workout {
+    id: string;
+    userId: string;
+    createdAt: string;
+    updatedAt: string;
+    fecha: string;
+    exercises: Exercise[];
+  }
+  type WorkoutsByDate = Record<string, Workout[]>;
+  const workoutsByDate: WorkoutsByDate = {};
+
   for (const w of recentWorkouts) {
     const key = formatDateKey(new Date(w.fecha));
+
     if (!workoutsByDate[key]) {
-      workoutsByDate[key] = {
-        id: w.id,
-        fecha: w.fecha.toISOString(),
-        exercises: w.exercises.map((ex) => ({
-          id: ex.id,
-          nombre: ex.nombre,
-          series: ex.series,
-          repeticiones: ex.repeticiones,
-          peso: ex.peso,
-          duracionSegundos: ex.duracionSegundos,
-        })),
-      };
+      workoutsByDate[key] = [];
     }
+
+    workoutsByDate[key].push({
+      id: w.id,
+      userId: w.userId,
+      createdAt: w.createdAt.toISOString(),
+      updatedAt: w.updatedAt.toISOString(),
+      fecha: w.fecha.toISOString(),
+      exercises: w.exercises.map((ex) => ({
+        id: ex.id,
+        nombre: ex.nombre,
+        peso: ex.peso,
+        series: ex.series,
+        repeticiones: ex.repeticiones,
+        duracionSegundos: ex.duracionSegundos,
+        // 👇 este también era Date antes
+        createdAt: ex.createdAt.toISOString(),
+        workoutId: ex.workoutId,
+      })),
+    });
   }
 
   // ── Weekly summary (last 7 days) ──────────────────────────────────────
@@ -143,6 +154,9 @@ export default async function DashboardPage() {
   const muscleGroups = Object.entries(muscleGroupDays)
     .map(([nombre, days]) => ({ nombre, dias: days.size }))
     .sort((a, b) => b.dias - a.dias);
+
+// Muscle group progress over time (for potential future use in a graph)
+  const chartData = buildChartData(weeklyWorkouts);
 
   // ── Latest AI memory ──────────────────────────────────────────────────
   const latestMemory = await db.query.aiMemories.findFirst({
@@ -215,6 +229,7 @@ export default async function DashboardPage() {
           <WeeklySummary
             muscleGroups={muscleGroups}
             totalDays={uniqueTrainingDays}
+            chartData={chartData}
           />
           <TrainingCalendar workoutsByDate={workoutsByDate} />
         </main>
