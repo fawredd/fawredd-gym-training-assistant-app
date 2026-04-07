@@ -2,6 +2,7 @@
 // Types
 // ==============================
 
+
 export type MuscleGroup =
   | "Pecho"
   | "Espalda Alta"
@@ -15,7 +16,7 @@ export type MuscleGroup =
   | "Gemelos"
   | "Abdominales"
   | "Core"
-  | "Otros";
+  | `Otros - ${string}`;
 
 
 const SPECIFIC_RULES: { keywords: string[]; group: MuscleGroup }[] = [
@@ -168,5 +169,5 @@ export function classifyExercise(nombre: string): MuscleGroup {
     }
   }
 
-  return "Otros";
+  return `Otros - ${lower}`;
 }

@@ -25,7 +25,7 @@ export function AIInsight({
       const custom = ev as CustomEvent;
       const detail = custom?.detail as any;
       if (!detail) return;
-      setContenido(detail.contenido ?? null);
+      setContenido(JSON.parse(detail.contenido) ?? null);
       setFecha(detail.fecha ? new Date(detail.fecha) : new Date());
     };
 
