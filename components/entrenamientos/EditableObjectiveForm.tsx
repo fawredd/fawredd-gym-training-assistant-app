@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Form } from "@base-ui/react/form";
 
 export default function EditableObjectiveForm({
   initial,
@@ -38,25 +37,24 @@ export default function EditableObjectiveForm({
   return (
     <form
       onSubmit={handleSave}
-      className="w-full h-lvh px-4 md:px-8 max-w-3xl mx-auto"
+      className="w-full flex flex-col flex-1 px-4 md:px-8 max-w-3xl mx-auto"
     >
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">
           {initial ? "Editar objetivo" : "Agregar objetivo"}
         </h1>
-        <Link href="/dashboard" className="text-sm text-muted-foreground">
+        <Link href="/dashboard" className="text-sm ">
           ← Volver
         </Link>
       </div>
-      <div className="bg-card rounded-xl h-full">
-        <label className="block text-sm font-medium text-muted-foreground mb-2">
-          Objetivo (texto corto)
+      <div className="flex flex-col rounded-xl flex-1">
+        <label className="block text-sm font-medium  mb-2">
+          Objetivo (descriptivo)
         </label>
         <textarea
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          className="w-full h-full p-3 rounded border border-border"
-          rows={4}
+          className="w-full flex-1 p-3 rounded border border-border resize-none overflow-y-auto"
         />
         <div className="mt-4 flex justify-end">
           <button
