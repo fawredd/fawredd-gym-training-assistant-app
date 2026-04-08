@@ -33,20 +33,20 @@ export function WeeklySummary({ muscleGroups, totalDays, chartData }: WeeklySumm
 
             {/* Table */}
             {muscleGroups.length > 0 ? (
-                <table className="w-full text-sm">
+                <table className="w-full text-sm border-collapse border-spacing-x-2">
                     <thead>
                         <tr className="text-left text-xs text-muted-foreground uppercase tracking-wide border-b border-border">
                             <th className="pb-2 font-medium">Grupo muscular</th>
-                            <th className="pb-2 font-medium text-right">Días</th>
-                            <th className="pb-2 font-medium text-right">Evolución</th>
+                            <th className="pb-2 font-medium text-center px-2">Días</th>
+                            <th className="pb-2 font-medium text-center px-2">Evolución</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
                         {muscleGroups.map((mg) => (
                             <tr key={mg.nombre}>
                                 <td className="py-2 font-medium capitalize">{mg.nombre}</td>
-                                <td className="py-2 text-right tabular-nums">{mg.dias}</td>
-                                <td className="py-2 text-right tabular-nums">
+                                <td className="py-2 text-center tabular-nums">{mg.dias}</td>
+                                <td className="p-0 m-0 text-center">
                                     <MiniProgressChart data={chartData[mg.nombre]} />
                                 </td>
                             </tr>

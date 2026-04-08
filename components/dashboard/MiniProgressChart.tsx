@@ -27,19 +27,15 @@ export default function MiniProgressChart({
     variant === "volume" ? "totalWeight" : "totalReps";
 
   return (
-    <div className="w-full h-8">
-      <ResponsiveContainer width="100%" height="100%">
+    <div className="w-full min-h-20px h-[20px] p-0 m-0">
+      <ResponsiveContainer width="100%" height="100%" className="min-w-0 bg-red p-0 m-0">
         <LineChart data={data}>
-          <Tooltip
-            contentStyle={{ fontSize: "8px" }}
-            labelStyle={{ display: "none" }}
-          />
           <Line
             type="monotone"
             dataKey={dataKey}
             strokeWidth={2}
-            dot={false}
-            isAnimationActive={false}
+            dot={true}
+            isAnimationActive={true}
           />
         </LineChart>
       </ResponsiveContainer>
