@@ -95,22 +95,22 @@ Generate a DAILY workout plan based on user data.
 
 RULES:
 - Avoid generic advice
-- Consider recovery and balance
+- IMPORTANT: Consider recovery and balance. Don't repeat the same muscle groups consecutive days.
 - Be concise
 
 USER DATA:
-- Goal: ${latestObjective?.content ?? existingUser.objetivo ?? "General fitness"}
-- Experience: ${existingUser.experiencia || "Unknown"}
-- Previous state: ${latestState?.content ?? null}
-- Last workouts: ${JSON.stringify(recentWorkouts)}
+- [Goal - start]: ${latestObjective?.content ?? existingUser.objetivo ?? "General fitness"} [Goal - end]
+- [Experience - start]: ${existingUser.experiencia || "Unknown"} [Experience - end]
+- [Previous state - start]: ${latestState?.content ?? null} [Previous state - end]
+- [Last workouts - start]: ${JSON.stringify(recentWorkouts)} [Last workouts - end]
 
 OUTPUT (STRICT JSON ONLY, NO TEXT OUTSIDE JSON):
 
 {
-  "resumen": "string",
+  "resumen": "string", // brief summary of the plan and rationale
   "rutina": {
-    "grupo": "string", //grupo muscular
-    "justificacion": "string",
+    "grupo": "string", //muscle group or focus area
+    "justificacion": "string", //brief reason for this focus based on user data
     "ejercicios": [
       {
         "nombre": "string",
@@ -134,7 +134,6 @@ IMPORTANT:
 - No extra text
 - All text must be in Spanish
 `;
-
   try {
     const { text } = await generateText({
       model: openrouter("openrouter/free"),
@@ -144,20 +143,24 @@ IMPORTANT:
     await db.insert(aiLogs).values({
       id: crypto.randomUUID(),
       userId: existingUser.id,
-      requestPayload: trimPayload(promptText, promptText.length),
-      responsePayload: trimPayload(text, text.length),
-    });
-
-    // Persist AI memory
-    await db.insert(aiMemories).values({
-      id: crypto.randomUUID(),
-      userId: existingUser.id,
-      contenido: trimPayload(text, text.length)!,
+      requestPayload: trimPayload(promptText, MAX_REQUEST_PAYLOAD),
+      responsePayload: trimPayload(text, MAX_RESPONSE_PAYLOAD),
     });
 
     // Try to extract a JSON training_state from the AI output
-    console.log("Raw AI response:", JSON.stringify(text));
     const parsed = parseAIResponse(text);
+
+     // Persist AI memory
+    if (parsed)
+      try {
+        await db.insert(aiMemories).values({
+          id: crypto.randomUUID(),
+          userId: existingUser.id,
+          contenido: JSON.stringify(parsed),
+        });
+      } catch (e) {
+        console.warn("Failed to persist AI memory", e);
+      }
 
     const trainingState: TrainingState | null = parsed?.training_state ?? null;
 

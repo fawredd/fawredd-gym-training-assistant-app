@@ -25,6 +25,7 @@ import {
 import { Check, X } from "lucide-react";
 import { redirect } from "next/navigation";
 import { buildChartData } from "@/lib/muscleGraphData";
+import { AIResponse, formatAIResponseForUI } from "@/lib/ai-response";
 
 function formatDateKey(date: Date): string {
   return date.toISOString().split("T")[0];
@@ -225,7 +226,7 @@ export default async function DashboardPage() {
           <MainCta />
 
           <AIInsight
-            contenido={latestMemory?.contenido ?? null}
+            contenido={formatAIResponseForUI(JSON.parse(latestMemory?.contenido || "{}") as AIResponse) ?? null}
             fecha={latestMemoryFecha}
           />
           <WeeklySummary

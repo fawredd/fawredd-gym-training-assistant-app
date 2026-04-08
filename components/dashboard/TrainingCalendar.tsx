@@ -28,15 +28,25 @@ interface TrainingCalendarProps {
 }
 
 function formatDate(date: Date): string {
-  return date.toISOString().split("T")[0];
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function parseLocalDate(dateStr: string) {
+  const [datePart] = dateStr.split("T"); // "2026-04-07"
+  const [y, m, d] = datePart.split("-").map(Number);
+  return new Date(y, m - 1, d);
 }
 
 const DAY_LABELS = ["Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sá"];
 
 export function TrainingCalendar({ workoutsByDate }: TrainingCalendarProps) {
-  const [selectedWorkout, setSelectedWorkout] = useState<WorkoutsByDate[string] | null>(
-    null,
-  );
+  const [selectedWorkout, setSelectedWorkout] = useState<
+    WorkoutsByDate[string] | null
+  >(null);
   const [emptyDay, setEmptyDay] = useState<string | null>(null);
 
   // Build last 20 days including today
@@ -104,11 +114,14 @@ export function TrainingCalendar({ workoutsByDate }: TrainingCalendarProps) {
           <div className="relative z-10 w-full max-w-md bg-card rounded-t-3xl sm:rounded-2xl shadow-2xl p-6 flex flex-col gap-4 max-h-[80vh] overflow-y-auto">
             <div className="flex items-center justify-between">
               <h3 className="font-bold text-lg">
-                {new Date(selectedWorkout[0].fecha).toLocaleDateString("es-AR", {
-                  weekday: "long",
-                  day: "numeric",
-                  month: "long",
-                })}
+                {parseLocalDate(selectedWorkout[0].fecha).toLocaleDateString(
+                  "es-AR",
+                  {
+                    weekday: "long",
+                    day: "numeric",
+                    month: "long",
+                  },
+                )}
               </h3>
               <button
                 onClick={() => setSelectedWorkout(null)}
@@ -119,31 +132,30 @@ export function TrainingCalendar({ workoutsByDate }: TrainingCalendarProps) {
               </button>
             </div>
 
-            { selectedWorkout.map((w)=>{
-              return (
-                    w.exercises.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                      Sin ejercicios registrados.
-                    </p>
-                  ) : (
-                    <>
-                    <ul className="divide-y divide-border">
-                      {w.exercises.map((ex) => (
-                        <li
-                          key={ex.id}
-                          className="py-2.5 flex justify-between items-start gap-2"
-                        >
-                          <span className="font-medium text-sm leading-tight">
-                            {ex.nombre}
-                          </span>
-                          <span className="text-xs text-muted-foreground shrink-0">
-                            {ex.duracionSegundos && ex.duracionSegundos > 0
-                              ? `${ex.duracionSegundos}s`
-                              : `${ex.series ?? 1}×${ex.repeticiones ?? 0}${ex.peso ? ` @ ${ex.peso}kg` : ""}`}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
+            {selectedWorkout.map((w) => {
+              return w.exercises.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Sin ejercicios registrados.
+                </p>
+              ) : (
+                <>
+                  <ul className="divide-y divide-border" key={w.id}>
+                    {w.exercises.map((ex) => (
+                      <li
+                        key={ex.id}
+                        className="py-2.5 flex justify-between items-start gap-2"
+                      >
+                        <span className="font-medium text-sm leading-tight">
+                          {ex.nombre}
+                        </span>
+                        <span className="text-xs text-muted-foreground shrink-0">
+                          {ex.duracionSegundos && ex.duracionSegundos > 0
+                            ? `${ex.duracionSegundos}s`
+                            : `${ex.series ?? 1}×${ex.repeticiones ?? 0}${ex.peso ? ` @ ${ex.peso}kg` : ""}`}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
                   <div className="flex flex-col gap-2 pt-2">
                     <Link
                       href={`/entrenamientos/${w.id}/edit`}
@@ -153,11 +165,9 @@ export function TrainingCalendar({ workoutsByDate }: TrainingCalendarProps) {
                       ✏️ Editar entrenamiento
                     </Link>
                   </div>
-                  </>
-                  )
-                )
-              })
-            }
+                </>
+              );
+            })}
           </div>
         </div>
       )}
@@ -171,7 +181,7 @@ export function TrainingCalendar({ workoutsByDate }: TrainingCalendarProps) {
           <div className="relative z-10 w-full max-w-md bg-card rounded-t-3xl sm:rounded-2xl shadow-2xl p-6 flex flex-col gap-4 max-h-[80vh] overflow-y-auto">
             <div className="flex items-center justify-between">
               <h3 className="font-bold text-lg">
-                {new Date(emptyDay).toLocaleDateString("es-AR", {
+                {parseLocalDate(emptyDay).toLocaleDateString("es-AR", {
                   weekday: "long",
                   day: "numeric",
                   month: "long",
