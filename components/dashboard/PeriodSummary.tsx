@@ -6,16 +6,16 @@ interface MuscleGroup {
     dias: number;
 }
 
-interface WeeklySummaryProps {
+interface PeriodSummaryProps {
     muscleGroups: MuscleGroup[]; // sorted desc
-    totalDays: number; // out of 7
+    totalDays: number; 
     chartData: ChartData; // for potential future use in a graph
 }
 
 // Map of keywords in exercise names → muscle group labels
 // This is used in the dashboard page to classify exercises on the server.
 
-export function WeeklySummary({ muscleGroups, totalDays, chartData }: WeeklySummaryProps) {
+export function PeriodSummary({ muscleGroups, totalDays, chartData }: PeriodSummaryProps) {
     const top = muscleGroups[0];
     const least = muscleGroups[muscleGroups.length - 1];
 
@@ -27,7 +27,7 @@ export function WeeklySummary({ muscleGroups, totalDays, chartData }: WeeklySumm
 
             {/* Frequency */}
             <div className="flex items-center gap-2">
-                <span className="text-2xl font-bold">{totalDays}/7</span>
+                <span className="text-2xl font-bold">{totalDays}/20</span>
                 <span className="text-sm text-muted-foreground">días entrenados</span>
             </div>
 

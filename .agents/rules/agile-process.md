@@ -19,6 +19,7 @@ trigger: always_on
 | **Infrastructure Engineer** | Maintains Docker, runtime environments, and deployment infrastructure according to BA specs |
 | **QA Engineer** | Validates features through automated and manual testing |
 | **Security Engineer** | Reviews architecture and code for security risks |
+| **CI Engineer** | Runs lint, typecheck and production build as a mandatory quality gate before QA |
 
 ---
 
@@ -37,6 +38,14 @@ trigger: always_on
 Prevent single chat instances from growing unbounded by enforcing **one focused agent chat per functionality/task**.
 
 ### Protocol Rules
+
+0. **Model Routing Rules**
+
+	- Low complexity → gemini-3-flash
+	- Medium complexity → gpt-oss-120b
+	- High complexity → gemini-3.1-pro-low
+	- Critical (security/infra) → claude-sonnet-4.6
+	- Extreme reasoning → claude-opus-4.6
 
 1. **One Task = One Chat**
    - Every task assigned to an agent MUST be opened in a **new, separate agent chat** (`/new`)
@@ -114,6 +123,16 @@ Updating docker-compose to add Redis container.
 > **No implementation work (frontend, backend, QA, security, infrastructure) may begin on any task until the Technical BA has produced a Requirement Doc marked `[APPROVED]` for that task.**
 > **Stakeholder will test the app manually in development and production. Don't use nor implement github actions, testing with playright, docker implementations as stakeholder will test the app manually unless requested by stakeholder.**
 
+### Post-Implementation Handoff Rule
+
+After completing any implementation task, developers MUST immediately hand off the task to the **CI Engineer**.
+
+Developers are NOT allowed to move tasks directly to QA.
+
+Workflow order is strictly:
+
+Implementation → CI Engineer → QA Engineer
+
 ---
 
 ## API Documentation Standard
@@ -171,7 +190,62 @@ Escalated To: Lead PM
 
 ---
 
+## Build Validation Gate (MANDATORY)
+
+After any implementation task (Frontend, Backend, Infrastructure), the task MUST be handed to the **CI Engineer** before QA validation can begin.
+
+The CI Engineer acts as the project's **local CI pipeline** and verifies that the project compiles and builds successfully.
+
+### Allowed Commands
+
+The CI Engineer may ONLY execute the following commands:
+
+```bash
+pnpm run lint
+npx tsc --noEmit
+pnpm run build
+```
+
+No other commands are permitted.
+
+Commands MUST run in this exact order.
+
+### Failure Policy
+
+If any command fails, the task is BLOCKED and must be reassigned to the implementing engineer.
+
+CI must output:
+
+```
+[BLOCKED]
+Agent: CI Engineer
+Task: <task id>
+Reason: Build validation failed (lint/typecheck/build)
+Escalated To: Lead PM
+```
+
+QA MUST NOT start validation until CI passes.
+
+### Success Output
+
+If all commands succeed, CI outputs:
+
+```
+[CI_APPROVED]
+Agent: CI Engineer
+Checks:
+- Lint: PASS
+- Typecheck: PASS
+- Build: PASS
+```
+
+Only after this approval may the task move to QA.
+
+---
+
 ## Implementation Validation (CRITICAL)
+
+> Implementation cannot be validated by QA until the CI Engineer outputs `[CI_APPROVED]`.
 
 The QA Engineer must validate not only that test cases exist, but that the **actual implementation behavior matches the stakeholder-defined experience**.
 
@@ -267,6 +341,10 @@ A task is **Done** when all of the following are true:
 - [ ] No critical or high-severity functional gaps remain
 - [ ] `STATE.md` has been updated by the completing agent
 - [ ] BACKLOG.md status is updated to `DONE`
+- [ ] `pnpm run lint` passes
+- [ ] `npx tsc --noEmit` passes
+- [ ] `pnpm run build` succeeds
+- [ ] CI Engineer issued `[CI_APPROVED]`
 
 ---
 

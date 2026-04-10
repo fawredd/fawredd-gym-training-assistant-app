@@ -5,14 +5,13 @@
 import { classifyExercise } from "./muscleClassifier";
 
 type MuscleProgress = {
-  date: string;        // "YYYY-MM-DD"
+  column: number;        // "YYYY-MM-DD"
   totalReps: number;
   totalWeight: number; // volumen total
   avgWeight: number;   // peso promedio por rep
 };
 
 export type ChartData = Record<string, MuscleProgress[]>;
-
 
 // ==============================
 // Helpers
@@ -22,46 +21,12 @@ export type ChartData = Record<string, MuscleProgress[]>;
 function formatDateKey(date: Date): string {
   return date.toISOString().split("T")[0];
 }
-
-
-// Rellena días faltantes para gráficos continuos
-function fillMissingDays(data: MuscleProgress[]): MuscleProgress[] {
-  if (data.length === 0) return data;
-
-  const result: MuscleProgress[] = [];
-
-  const start = new Date(data[0].date + "T00:00:00");
-  const end = new Date(data[data.length - 1].date + "T00:00:00");
-
-  const current = new Date(start);
-
-  while (current <= end) {
-    const key = formatDateKey(current);
-
-    const existing = data.find((d) => d.date === key);
-
-    result.push(
-      existing ?? {
-        date: key,
-        totalReps: 0,
-        totalWeight: 0,
-        avgWeight: 0,
-      }
-    );
-
-    current.setDate(current.getDate() + 1);
-  }
-
-  return result;
-}
-
-
 // ==============================
 // Main builder
 // ==============================
 
 export function buildChartData(
-  weeklyWorkouts: {
+  periodWorkouts: {
     fecha: Date;
     exercises: {
       nombre: string;
@@ -80,7 +45,7 @@ export function buildChartData(
     >
   > = {};
 
-  for (const w of weeklyWorkouts) {
+  for (const w of periodWorkouts) {
     // ⚠️ evita problemas de timezone
     const dayKey = formatDateKey(w.fecha);
 
@@ -110,24 +75,32 @@ export function buildChartData(
   }
 
   // Transformación final
-  const chartData: ChartData = {};
+  // Transformación final → sesiones consecutivas por músculo
+const chartData: ChartData = {};
 
-  for (const [group, days] of Object.entries(progressByGroup)) {
-    const sorted = Object.entries(days)
-      .map(([date, values]) => ({
-        date,
-        totalReps: values.totalReps,
-        totalWeight: values.totalWeight,
-        avgWeight:
-          values.totalReps > 0
-            ? values.totalWeight / values.totalReps
-            : 0,
-      }))
-      .sort((a, b) => a.date.localeCompare(b.date));
+for (const [group, days] of Object.entries(progressByGroup)) {
+  // 1) ordenar por fecha (solo para saber el orden de entrenamientos)
+  const sortedDays = Object.entries(days)
+    .sort(([a], [b]) => a.localeCompare(b));
 
-    // 🔥 clave para UX
-    chartData[group] = fillMissingDays(sorted);
-  }
+  // 2) convertir a columnas consecutivas (0,1,2,3...)
+  let columnIndex = 0;
+
+  chartData[group] = sortedDays.map(([_, values]) => {
+    const totalReps = values.totalReps;
+    const totalWeight = values.totalWeight;
+    const avgWeight = totalReps > 0 ? totalWeight / totalReps : 0;
+
+    const point: MuscleProgress = {
+      column: columnIndex++,
+      totalReps,
+      totalWeight,
+      avgWeight,
+    };
+
+    return point;
+  });
+}
 
   return chartData;
 }

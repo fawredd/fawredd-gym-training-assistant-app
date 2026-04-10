@@ -8,7 +8,7 @@ import {
 } from "recharts";
 
 type DataPoint = {
-  date: string;
+  column: number;
   totalReps: number;
   totalWeight: number;
 };

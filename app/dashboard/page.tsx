@@ -13,7 +13,7 @@ import { Header } from "@/components/dashboard/Header";
 import { MainCta } from "@/components/dashboard/MainCta";
 //import { DailyStatus } from "@/components/dashboard/DailyStatus";
 import { TrainingCalendar } from "@/components/dashboard/TrainingCalendar";
-import { WeeklySummary } from "@/components/dashboard/WeeklySummary";
+import { PeriodSummary } from "@/components/dashboard/PeriodSummary";
 import { AIInsight } from "@/components/dashboard/AIInsight";
 import { classifyExercise } from "@/lib/muscleClassifier";
 import {
@@ -73,9 +73,9 @@ export default async function DashboardPage() {
   twentyDaysAgo.setDate(twentyDaysAgo.getDate() - 19);
   twentyDaysAgo.setHours(0, 0, 0, 0);
 
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
-  sevenDaysAgo.setHours(0, 0, 0, 0);
+  const xDaysAgo = new Date();
+  xDaysAgo.setDate(xDaysAgo.getDate() - 19); //Number of days to summarize
+  xDaysAgo.setHours(0, 0, 0, 0);
 
   // ── Single query for last 20 days workouts + exercises ───────────────
   const recentWorkouts = await db.query.workouts.findMany({
@@ -131,19 +131,19 @@ export default async function DashboardPage() {
     });
   }
 
-  // ── Weekly summary (last 7 days) ──────────────────────────────────────
-  const weeklyWorkouts = recentWorkouts.filter(
-    (w) => new Date(w.fecha) >= sevenDaysAgo,
+  // ── Period summary (last X days) ──────────────────────────────────────
+  const periodWorkouts = recentWorkouts.filter(
+    (w) => new Date(w.fecha) >= xDaysAgo,
   );
 
   // Track unique training days
   const uniqueTrainingDays = new Set(
-    weeklyWorkouts.map((w) => formatDateKey(new Date(w.fecha))),
+    periodWorkouts.map((w) => formatDateKey(new Date(w.fecha))),
   ).size;
 
   // Count muscle groups across all exercises in last 7 days
   const muscleGroupDays: Record<string, Set<string>> = {};
-  for (const w of weeklyWorkouts) {
+  for (const w of periodWorkouts) {
     const dayKey = formatDateKey(new Date(w.fecha));
     for (const ex of w.exercises) {
       const group = classifyExercise(ex.nombre);
@@ -157,7 +157,7 @@ export default async function DashboardPage() {
     .sort((a, b) => b.dias - a.dias);
 
 // Muscle group progress over time (for potential future use in a graph)
-  const chartData = buildChartData(weeklyWorkouts);
+  const chartData = buildChartData(periodWorkouts);
 
   // ── Latest AI memory ──────────────────────────────────────────────────
   const latestMemory = await db.query.aiMemories.findFirst({
@@ -229,7 +229,7 @@ export default async function DashboardPage() {
             contenido={formatAIResponseForUI(JSON.parse(latestMemory?.contenido || "{}") as AIResponse) ?? null}
             fecha={latestMemoryFecha}
           />
-          <WeeklySummary
+          <PeriodSummary
             muscleGroups={muscleGroups}
             totalDays={uniqueTrainingDays}
             chartData={chartData}

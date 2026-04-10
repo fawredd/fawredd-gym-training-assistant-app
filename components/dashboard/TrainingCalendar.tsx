@@ -138,8 +138,8 @@ export function TrainingCalendar({ workoutsByDate }: TrainingCalendarProps) {
                   Sin ejercicios registrados.
                 </p>
               ) : (
-                <>
-                  <ul className="divide-y divide-border" key={w.id}>
+                <div key={w.id}>
+                  <ul className="divide-y divide-border">
                     {w.exercises.map((ex) => (
                       <li
                         key={ex.id}
@@ -165,7 +165,7 @@ export function TrainingCalendar({ workoutsByDate }: TrainingCalendarProps) {
                       ✏️ Editar entrenamiento
                     </Link>
                   </div>
-                </>
+                </div>
               );
             })}
           </div>
