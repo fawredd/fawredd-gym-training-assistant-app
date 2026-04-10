@@ -45,7 +45,7 @@ export async function POST() {
     const lastGenerated = await kv.get<number>(rateLimitKey);
     const twelveHoursInMs = 1 * 60 * 60 * 1000; //Modify to 1hr for testing
     if (lastGenerated && Date.now() - lastGenerated < twelveHoursInMs && process.env.NODE_ENV === "production") {
-      return new NextResponse("Rate limit exceeded. Please wait 12h.", {
+      return new NextResponse("Rate limit exceeded. Please wait 1h.", {
         status: 429,
       });
     }
@@ -57,7 +57,7 @@ export async function POST() {
     );
   }
 
-  // Reduce payload size: fetch only last 3 workouts and trim exercise fields
+  // Reduce payload size: fetch only last 10 workouts and trim exercise fields
   const recentWorkoutsRaw = await db.query.workouts.findMany({
     where: eq(workouts.userId, existingUser.id),
     orderBy: [desc(workouts.fecha)],
@@ -138,6 +138,11 @@ IMPORTANT:
     const { text } = await generateText({
       model: openrouter("openrouter/free"),
       prompt: promptText,
+      //temperature: 0,        // 🔴 biggest change
+      topP: 0.1,             // restrict token choices
+      topK: 20,              // optional but helpful
+      frequencyPenalty: 0,
+      presencePenalty: 0,
     });
 
     await db.insert(aiLogs).values({
