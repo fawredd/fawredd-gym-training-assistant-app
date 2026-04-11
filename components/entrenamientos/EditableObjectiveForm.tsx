@@ -2,6 +2,48 @@
 
 import { useState } from "react";
 import Link from "next/link";
+const objectivePlaceHolder = `
+    Ejemplo de objetivo de entrenamiento
+
+    Edad: [tu edad]
+    Peso: [tu peso]
+    Altura: [tu altura]
+    Contextura física: [delgada / media / robusta]
+
+    Actividad deportiva actual
+    - Practico: [deporte]
+    - Frecuencia semanal: [días y duración]
+
+    Disponibilidad para gimnasio
+    - Días de entrenamiento: [ej: lunes a viernes]
+
+    Objetivo principal
+    Describe qué quieres lograr y por qué.
+    Ej: mejorar rendimiento deportivo, evitar lesiones, ganar masa muscular, perder grasa, mejorar resistencia, etc.
+
+    Objetivos específicos y medibles (muy importante)
+    Ejemplos:
+    - Lograr X repeticiones de flexiones: [ej: 3x15]
+    - Lograr X repeticiones con rueda abdominal: [ej: 3x15 con buena extensión]
+    - Reducir grasa abdominal / mejorar definición muscular
+    - Fortalecer [piernas / core / espalda / tren superior]
+
+    Estado actual (tu punto de partida)
+    Ej:
+    - Hoy puedo hacer: [ej: 3x7 flexiones]
+    - Limitaciones actuales: [ej: poca fuerza abdominal]
+
+    Lesiones o zonas a cuidar
+    Ej: problemas lumbares, rodillas, hombros, etc.
+
+    Preferencias de entrenamiento
+    Ejemplos:
+    - No repetir grupos musculares en días consecutivos
+    - Entrenar todos los grupos musculares durante la semana
+    - Combinar tren inferior, superior y core cuando sea conveniente
+
+    Importante
+    Quiero que las próximas rutinas se adapten a mi progreso y a mi historial de entrenamiento para que sean desafiantes pero seguras.`
 
 export default function EditableObjectiveForm({
   initial,
@@ -53,6 +95,7 @@ export default function EditableObjectiveForm({
         </label>
         <textarea
           value={value}
+          placeholder={objectivePlaceHolder}
           onChange={(e) => setValue(e.target.value)}
           className="w-full flex-1 p-3 rounded border border-border resize-none overflow-y-auto"
         />

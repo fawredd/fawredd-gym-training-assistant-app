@@ -3,6 +3,7 @@ export interface TrainingState {
   weekly_balance: string;
   fatigue_level: "bajo" | "medio" | "alto";
   recommendation_next: string;
+  user_traning_evolution_analysis: string;
 }
 
 export interface AIResponse {
@@ -34,7 +35,8 @@ function isAIResponse(obj: unknown): obj is AIResponse {
     typeof ts.last_focus === "string" &&
     typeof ts.weekly_balance === "string" &&
     typeof ts.fatigue_level === "string" &&
-    typeof ts.recommendation_next === "string"
+    typeof ts.recommendation_next === "string" &&
+    typeof ts.user_traning_evolution_analysis === "string"
   );
 }
 

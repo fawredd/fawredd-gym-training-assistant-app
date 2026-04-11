@@ -25,7 +25,7 @@ function formatDateKey(date: Date): string {
 // Main builder
 // ==============================
 
-export function buildChartData(
+export async function buildChartData(
   periodWorkouts: {
     fecha: Date;
     exercises: {
@@ -35,7 +35,7 @@ export function buildChartData(
       series: number | null;
     }[];
   }[]
-): ChartData {
+): Promise<ChartData> {
   // Agrupación intermedia
   const progressByGroup: Record<
     string,
@@ -50,7 +50,7 @@ export function buildChartData(
     const dayKey = formatDateKey(w.fecha);
 
     for (const ex of w.exercises) {
-      const group = classifyExercise(ex.nombre);
+      const group = await classifyExercise(ex.nombre);
 
       if (!progressByGroup[group]) {
         progressByGroup[group] = {};

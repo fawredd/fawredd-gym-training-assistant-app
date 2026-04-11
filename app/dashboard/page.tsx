@@ -146,7 +146,7 @@ export default async function DashboardPage() {
   for (const w of periodWorkouts) {
     const dayKey = formatDateKey(new Date(w.fecha));
     for (const ex of w.exercises) {
-      const group = classifyExercise(ex.nombre);
+      const group = await classifyExercise(ex.nombre);
       if (!muscleGroupDays[group]) muscleGroupDays[group] = new Set();
       muscleGroupDays[group].add(dayKey);
     }
@@ -157,7 +157,7 @@ export default async function DashboardPage() {
     .sort((a, b) => b.dias - a.dias);
 
 // Muscle group progress over time (for potential future use in a graph)
-  const chartData = buildChartData(periodWorkouts);
+  const chartData = await buildChartData(periodWorkouts);
 
   // ── Latest AI memory ──────────────────────────────────────────────────
   const latestMemory = await db.query.aiMemories.findFirst({
