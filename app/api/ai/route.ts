@@ -184,7 +184,7 @@ Requirements:
   try {
     const { text } = await generateText({
       //model: openrouter("openrouter/free"),
-      model: google('gemini-2.5-flash'),
+      model: google('gemini-3.1-flash-lite-preview'),
       prompt: promptText,
       //temperature: 0,        // 🔴 biggest change
       topP: 0.1,             // restrict token choices
