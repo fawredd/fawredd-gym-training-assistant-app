@@ -195,7 +195,9 @@ export async function classifyExercise(nombre: string): Promise<MuscleGroup> {
     }
   }
   const localResult: MuscleGroup = `Otros - ${lower}`;
-  const muscleGroupSchema = z.object({
+  return localResult
+  
+/*   const muscleGroupSchema = z.object({
     group: z.enum(MUSCLE_GROUPS),
   });
   // 2️⃣ Fallback: AI solo cuando las reglas no alcanzaron
@@ -216,5 +218,5 @@ Si es un ejercicio abdominal de contracción, responde "Abdominales".`,
     // Si la API falla (rate limit, red, etc.) devolvemos el resultado local
     console.warn("[classifyExercise] AI fallback failed:", err);
     return localResult;
-  }
+  } */
 }
