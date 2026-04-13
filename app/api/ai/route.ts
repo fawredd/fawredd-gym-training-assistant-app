@@ -10,14 +10,15 @@ import {
   trainingStates,
 } from "../../../db/schema";
 import { eq, desc } from "drizzle-orm";
-import { createOpenRouter } from "@openrouter/ai-sdk-provider";
+//import { createOpenRouter } from "@openrouter/ai-sdk-provider";
+import { google } from '@ai-sdk/google';
 import { generateText } from "ai";
 import { kv } from "@vercel/kv";
 import { parseAIResponse, TrainingState } from "@/lib/ai-response";
 
-const openrouter = createOpenRouter({
-  apiKey: process.env.OPENROUTER_API_KEY,
-});
+//const openrouter = createOpenRouter({
+//  apiKey: process.env.OPENROUTER_API_KEY,
+//});
 
 // Trim helpers to limit stored token sizes
 const MAX_REQUEST_PAYLOAD = 2000;
@@ -182,7 +183,8 @@ Requirements:
   }
   try {
     const { text } = await generateText({
-      model: openrouter("openrouter/free"),
+      //model: openrouter("openrouter/free"),
+      model: google('gemini-2.5-flash'),
       prompt: promptText,
       //temperature: 0,        // 🔴 biggest change
       topP: 0.1,             // restrict token choices
