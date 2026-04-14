@@ -16,7 +16,10 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Fawredd Gym Assistant",
-  description: "MVP Gym Tracking & AI Assistant",
+  description: "Gym Tracking & AI Assistant",
+  verification: {
+    google: process.env.GOOGLE_SITE_VERIFICATION
+  },
 };
 
 export default function RootLayout({
