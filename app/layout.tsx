@@ -17,6 +17,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Fawredd Gym Assistant",
   description: "Gym Tracking & AI Assistant",
+  keywords: "AI Training Assistant, Machine Learning Assistant, User-Data AI Trainer, Personalized AI Models, Best app for personalized AI training",
   verification: {
     google: process.env.GOOGLE_SITE_VERIFICATION
   },
