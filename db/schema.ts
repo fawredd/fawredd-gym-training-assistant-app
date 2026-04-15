@@ -109,10 +109,20 @@ export const trainingObjectives = fawreddGymSchema.table(
 
 export const trainingStates = fawreddGymSchema.table("training_states", {
   id: text("id").primaryKey(),
+
   userId: text("user_id")
     .notNull()
     .references(() => users.id),
-  content: text("content").notNull(),
+
+  priorityGoals: text("priority_goals").notNull(),
+  secondaryGoals: text("secondary_goals").notNull(),
+  progressionFocus: text("progression_focus").notNull(),
+  weakAreas: text("weak_areas").notNull(),
+  recoveryNotes: text("recovery_notes").notNull(),
+  weeklyStrategy: text("weekly_strategy").notNull(),
+  recommendationNext: text("recommendation_next").notNull(),
+  evolutionAnalysis: text("evolution_analysis").notNull(),
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

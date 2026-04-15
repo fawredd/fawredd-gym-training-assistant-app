@@ -71,11 +71,10 @@ export function AIInsight({
         </div>
       ) : (
         <p className="text-sm text-muted-foreground">
-          Aún no generaste una ayuda memoria. Cargá entrenamientos y generá tu
+          Aún no generaste una ayuda memoria. Cargá tu objetivo, entrenamientos y generá tu
           primera recomendación.
         </p>
       )}
-      {/* Suggest button shown only inside AIInsight */}
       <SuggestButton />
     </div>
   );

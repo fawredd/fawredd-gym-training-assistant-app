@@ -3,6 +3,8 @@
 import {
   LineChart,
   Line,
+  BarChart,
+  Bar,
   ResponsiveContainer,
   Tooltip,
 } from "recharts";
@@ -29,7 +31,7 @@ export default function MiniProgressChart({
   return (
     <div className="w-full min-h-20px h-[20px] p-0 m-0">
       <ResponsiveContainer width="100%" height="100%" className="min-w-0 bg-red p-0 m-0">
-        <LineChart data={data}>
+{/*         <LineChart data={data}>
           <Line
             type="monotone"
             dataKey={dataKey}
@@ -38,7 +40,16 @@ export default function MiniProgressChart({
             isAnimationActive={true}
           />
         </LineChart>
-      </ResponsiveContainer>
+ */}      
+         <BarChart data={data}>
+          <Bar
+            dataKey={dataKey}
+            strokeWidth={2}
+            isAnimationActive={true}
+          />
+        </BarChart>
+
+ </ResponsiveContainer>
     </div>
   );
 }

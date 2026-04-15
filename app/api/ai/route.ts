@@ -10,25 +10,26 @@ import {
   trainingStates,
 } from "../../../db/schema";
 import { eq, desc } from "drizzle-orm";
-//import { createOpenRouter } from "@openrouter/ai-sdk-provider";
-import { google } from '@ai-sdk/google';
-import { generateText } from "ai";
+import { createOpenRouter } from "@openrouter/ai-sdk-provider";
+import { google } from "@ai-sdk/google";
+import { streamText } from "ai";
 import { kv } from "@vercel/kv";
 import { parseAIResponse, TrainingState } from "@/lib/ai-response";
+import { mapTrainingStateToDB } from "@/lib/training-state-utils";
 
-//const openrouter = createOpenRouter({
-//  apiKey: process.env.OPENROUTER_API_KEY,
-//});
+const openrouter = createOpenRouter({
+  apiKey: process.env.OPENROUTER_API_KEY,
+});
 
 // Trim helpers to limit stored token sizes
 const MAX_REQUEST_PAYLOAD = 2000;
 const MAX_RESPONSE_PAYLOAD = 4000;
 const MAX_MEMORY_CONTENT = 2000;
+
 function trimPayload(s: string | null | undefined, max: number) {
   if (!s) return s ?? null;
   return s.length > max ? s.slice(0, max) : s;
 }
-
 
 export async function POST() {
   const { userId } = await auth();
@@ -45,8 +46,12 @@ export async function POST() {
     const rateLimitKey = `rl_ai_${existingUser.id}`;
     const lastGenerated = await kv.get<number>(rateLimitKey);
     const twelveHoursInMs = 1 * 60 * 60 * 1000; //Modify to 1hr for testing
-    if (lastGenerated && Date.now() - lastGenerated < twelveHoursInMs && process.env.NODE_ENV === "production") {
-      return new NextResponse("Rate limit exceeded. Please wait 1h.", {
+    if (
+      lastGenerated &&
+      Date.now() - lastGenerated < twelveHoursInMs &&
+      process.env.NODE_ENV === "production"
+    ) {
+      return new NextResponse("Rate limit exceeded. Please wait.", {
         status: 429,
       });
     }
@@ -145,8 +150,31 @@ Requirements:
 #USER DATA:
 - [Goal (written in spanish) - start]: ${latestObjective?.content ?? existingUser.objetivo ?? "General fitness"} [Goal - end]
 - [Experience - start]: ${existingUser.experiencia || "Unknown"} [Experience - end]
-- [Previous state - start]: ${latestState?.content ?? null} [Previous state - end]
-- [Last workouts (written in spanish mostly and in JSON format ${JSON.stringify(typeof recentWorkouts)}) - start]: ${JSON.stringify(recentWorkouts)} [Last workouts - end]
+- [Previous state - start]: ${latestState ? JSON.stringify(latestState) : null} [Previous state - end]
+- [Last workouts (exercises are written in spanish mostly or english. workouts data format is: ${JSON.stringify(typeof recentWorkouts)}) - start]: ${JSON.stringify(recentWorkouts)} [Last workouts - end]
+## TRAINING STATE (COACH MEMORY SUMMARY)
+
+training_state is a compressed strategic summary of the user's training evolution.
+It does NOT describe the last workout. It describes the coaching strategy.
+
+It exists to avoid re-analysing the full history every prompt.
+
+It must be updated after each generated workout considering:
+- Goal
+- Previous state
+- Last workouts
+
+Fields:
+
+- priority_goals → What performance goals are currently prioritized.
+- secondary_goals → Secondary physique or health goals.
+- progression_focus → Exercises or abilities currently being progressed.
+- weak_areas → Muscle groups or capacities lagging behind.
+- recovery_notes → Fatigue, recovery or scheduling insights.
+- weekly_strategy → How the week is being balanced.
+- recommendation_next → Strategic suggestion for the next workout.
+- user_traning_evolution_analysis → Short longitudinal coaching insight.
+
 ##OUTPUT (STRICT JSON ONLY, NO TEXT OUTSIDE JSON):
 {
   "resumen": "string", // brief summary of the plan and rationale
@@ -162,11 +190,15 @@ Requirements:
     ]
   },
   "training_state": {
-    "last_focus": "string",
-    "weekly_balance": "balanceado | sobrecargado | subentrenado",
+    "priority_goals": "string",
+    "secondary_goals": "string",
+    "progression_focus": "string",
+    "weak_areas": "string",
+    "recovery_notes": "string",
+    "weekly_strategy": "string",
     "fatigue_level": "bajo | medio | alto",
     "recommendation_next": "string",
-    "user_traning_evolution_analysis": "string", //brief analysis of the user's training evolution based on SAFETY & GOAL LOGIC, the training history evolution.
+    "user_traning_evolution_analysis": "string",
   },
   
 }
@@ -178,20 +210,42 @@ Requirements:
 - No extra text
 - All text must be in Spanish
 `;
+
   if (process.env.NODE_ENV === "development") {
     console.log("Prompt:", promptText);
   }
   try {
-    const { text } = await generateText({
-      //model: openrouter("openrouter/free"),
-      model: google('gemini-3.1-flash-lite-preview'),
-      prompt: promptText,
-      //temperature: 0,        // 🔴 biggest change
-      topP: 0.1,             // restrict token choices
-      topK: 20,              // optional but helpful
-      frequencyPenalty: 0,
-      presencePenalty: 0,
-    });
+    // TRY AI CALLs WITH FALLBACK --------------
+    let text = "";
+
+    try {
+      const result = streamText({
+        model: google("gemini-3.1-flash-lite-preview"),
+        prompt: promptText,
+        topP: 0.1,
+        topK: 20,
+      });
+
+      for await (const delta of result.textStream) {
+        text += delta;
+      }
+    } catch (googleError) {
+      console.log("Google failed → fallback to OpenRouter");
+      try {
+      const result = streamText({
+        model: openrouter("openrouter/free"),
+        prompt: promptText,
+      });
+
+      for await (const delta of result.textStream) {
+        text += delta;
+      }
+      } catch (openRouterError) {
+        console.error("OpenRouter failed", openRouterError);
+        return new NextResponse("AI Generation Error", { status: 500 });
+      }
+    }
+//    -----------------------------------------------
 
     await db.insert(aiLogs).values({
       id: crypto.randomUUID(),
@@ -203,7 +257,7 @@ Requirements:
     // Try to extract a JSON training_state from the AI output
     const parsed = parseAIResponse(text);
 
-     // Persist AI memory
+    // Persist AI memory
     if (parsed)
       try {
         await db.insert(aiMemories).values({
@@ -217,28 +271,23 @@ Requirements:
 
     const trainingState: TrainingState | null = parsed?.training_state ?? null;
 
-    const stateContent =
-      trimPayload(
-        trainingState
-          ? JSON.stringify(trainingState)
-          : JSON.stringify({ summary: text.slice(0, 400) }),
-        MAX_MEMORY_CONTENT,
-      ) || JSON.stringify({ summary: "" });
+    if (!trainingState)
+      return new NextResponse("AI response format is invalid", { status: 422 });
 
-    // -------
     try {
       await db.insert(trainingStates).values({
         id: crypto.randomUUID(),
         userId: existingUser.id,
-        content: stateContent,
+        ...mapTrainingStateToDB(trainingState),
       });
     } catch (e) {
       console.warn("Failed to persist training state", e);
     }
     if (parsed) {
-      if (process.env.NODE_ENV === "development") console.log("Parsed AI response:", JSON.stringify(parsed));
+      if (process.env.NODE_ENV === "development")
+        console.log("Parsed AI response:", JSON.stringify(parsed));
       return NextResponse.json(parsed);
-    } 
+    }
     return new NextResponse("AI response could not be parsed", { status: 422 });
   } catch (error) {
     console.error("AI Generation failed", error);

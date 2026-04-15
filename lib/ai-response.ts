@@ -1,11 +1,13 @@
 export interface TrainingState {
-  last_focus: string;
-  weekly_balance: string;
-  fatigue_level: "bajo" | "medio" | "alto";
+  priority_goals: string;
+  secondary_goals: string;
+  progression_focus: string;
+  weak_areas: string;
+  recovery_notes: string;
+  weekly_strategy: string;
   recommendation_next: string;
   user_traning_evolution_analysis: string;
 }
-
 export interface AIResponse {
   resumen: string;
   rutina: {
@@ -26,15 +28,21 @@ function isAIResponse(obj: unknown): obj is AIResponse {
 
   if (
     typeof o.resumen !== "string" ||
-    typeof o.rutina !== "object" || o.rutina === null ||
-    typeof o.training_state !== "object" || o.training_state === null
-  ) return false;
+    typeof o.rutina !== "object" ||
+    o.rutina === null ||
+    typeof o.training_state !== "object" ||
+    o.training_state === null
+  )
+    return false;
 
   const ts = o.training_state as Record<string, unknown>;
   return (
-    typeof ts.last_focus === "string" &&
-    typeof ts.weekly_balance === "string" &&
-    typeof ts.fatigue_level === "string" &&
+    typeof ts.priority_goals === "string" &&
+    typeof ts.secondary_goals === "string" &&
+    typeof ts.progression_focus === "string" &&
+    typeof ts.weak_areas === "string" &&
+    typeof ts.recovery_notes === "string" &&
+    typeof ts.weekly_strategy === "string" &&
     typeof ts.recommendation_next === "string" &&
     typeof ts.user_traning_evolution_analysis === "string"
   );
@@ -42,7 +50,10 @@ function isAIResponse(obj: unknown): obj is AIResponse {
 
 function sanitizeJSON(raw: string): string {
   // 1. Quitar fences de markdown (```json ... ``` o ``` ... ```)
-  let text = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+  let text = raw
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/, "")
+    .trim();
 
   // 2. El modelo a veces devuelve \n literales como string escaped — normalizar
   text = text.replace(/\\n/g, "\n");
@@ -51,7 +62,7 @@ function sanitizeJSON(raw: string): string {
   //    e.g.  "reps": 45 segundos  →  "reps": "45 segundos"
   text = text.replace(
     /("(?:reps|series)")\s*:\s*(\d[\d\s]*[a-záéíóúüñ]+[^",\n\}]*)/gi,
-    (_, key, val) => `${key}: "${val.trim()}"`
+    (_, key, val) => `${key}: "${val.trim()}"`,
   );
 
   return text;

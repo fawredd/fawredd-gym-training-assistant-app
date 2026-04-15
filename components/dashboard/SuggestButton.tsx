@@ -15,12 +15,14 @@ export function SuggestButton() {
 
       if (res.status === 429) {
         setMessage("Límite de solicitudes alcanzado");
+        setLoading(false);
         return;
       }
 
       if (!res.ok) {
         const txt = await res.text();
-        setMessage(`Error: ${txt}`);
+        setMessage(`Error: ${txt} (${res.status})`);
+        setLoading(false);
         return;
       }
 

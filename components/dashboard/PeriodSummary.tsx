@@ -22,7 +22,7 @@ export function PeriodSummary({ muscleGroups, totalDays, chartData }: PeriodSumm
     return (
         <div className="mx-4 rounded-2xl border border-border bg-card p-4 flex flex-col gap-4">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                📈 Resumen semanal
+                📈 Resumen
             </h2>
 
             {/* Frequency */}
@@ -54,7 +54,7 @@ export function PeriodSummary({ muscleGroups, totalDays, chartData }: PeriodSumm
                     </tbody>
                 </table>
             ) : (
-                <p className="text-sm text-muted-foreground">Sin datos de la semana.</p>
+                <p className="text-sm text-muted-foreground">Sin datos.</p>
             )}
 
             {/* Insights */}

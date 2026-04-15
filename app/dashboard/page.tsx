@@ -31,6 +31,8 @@ function formatDateKey(date: Date): string {
   return date.toISOString().split("T")[0];
 }
 
+
+
 // ── Page ──────────────────────────────────────────────────────────────
 export default async function DashboardPage() {
   const { userId } = await auth();
@@ -156,7 +158,7 @@ export default async function DashboardPage() {
     .map(([nombre, days]) => ({ nombre, dias: days.size }))
     .sort((a, b) => b.dias - a.dias);
 
-// Muscle group progress over time (for potential future use in a graph)
+  // Muscle group progress over time (for potential future use in a graph)
   const chartData = await buildChartData(periodWorkouts);
 
   // ── Latest AI memory ──────────────────────────────────────────────────
@@ -226,7 +228,7 @@ export default async function DashboardPage() {
           <MainCta />
 
           <AIInsight
-            contenido={formatAIResponseForUI(JSON.parse(latestMemory?.contenido || "{}") as AIResponse) ?? null}
+            contenido={latestMemory ? formatAIResponseForUI(JSON.parse(latestMemory.contenido) as AIResponse) : null}
             fecha={latestMemoryFecha}
           />
           <PeriodSummary

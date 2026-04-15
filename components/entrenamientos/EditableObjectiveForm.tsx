@@ -3,54 +3,77 @@
 import { useState } from "react";
 import Link from "next/link";
 const objectivePlaceHolder = `
-    Ejemplo de objetivo de entrenamiento
+OBJETIVO DE ENTRENAMIENTO
 
-    Edad: [tu edad]
-    Peso: [tu peso]
-    Altura: [tu altura]
-    Contextura física: [delgada / media / robusta]
+Completa lo que puedas. Si algo no lo sabes, déjalo en blanco.
 
-    Actividad deportiva actual
-    - Practico: [deporte]
-    - Frecuencia semanal: [días y duración]
+━━━━━━━━━━━━━━━━━━
+TU CONTEXTO ACTUAL
 
-    Disponibilidad para gimnasio
-    - Días de entrenamiento: [ej: lunes a viernes]
+Edad:
+Peso:
+Altura:
+Contextura física: (delgada / media / robusta)
 
-    Objetivo principal
-    Describe qué quieres lograr y por qué.
-    Ej: mejorar rendimiento deportivo, evitar lesiones, ganar masa muscular, perder grasa, mejorar resistencia, etc.
+Actividad deportiva actual (si haces):
+Deporte:
+Frecuencia semanal:
+Duración por sesión:
 
-    Objetivos específicos y medibles (muy importante)
-    Ejemplos:
-    - Lograr X repeticiones de flexiones: [ej: 3x15]
-    - Lograr X repeticiones con rueda abdominal: [ej: 3x15 con buena extensión]
-    - Reducir grasa abdominal / mejorar definición muscular
-    - Fortalecer [piernas / core / espalda / tren superior]
+Disponibilidad para gimnasio:
+Días que puedes entrenar:
+Tiempo por sesión aproximado:
 
-    Estado actual (tu punto de partida)
-    Ej:
-    - Hoy puedo hacer: [ej: 3x7 flexiones]
-    - Limitaciones actuales: [ej: poca fuerza abdominal]
+━━━━━━━━━━━━━━━━━━
+TU OBJETIVO PRINCIPAL
 
-    Lesiones o zonas a cuidar
-    Ej: problemas lumbares, rodillas, hombros, etc.
+Describe qué quieres lograr y por qué.
+Ejemplos: ganar músculo, perder grasa, mejorar resistencia, rendir mejor en tu deporte, evitar lesiones, etc.
 
-    Preferencias de entrenamiento
-    Ejemplos:
-    - No repetir grupos musculares en días consecutivos
-    - Entrenar todos los grupos musculares durante la semana
-    - Combinar tren inferior, superior y core cuando sea conveniente
+Objetivos específicos y medibles (muy importante)
+Ejemplos:
+• Lograr ___ flexiones (ej: 3x15)
+• Lograr ___ con rueda abdominal (ej: 3x15)
+• Bajar grasa abdominal / mejorar definición
+• Fortalecer: piernas / core / espalda / tren superior
 
-    Importante
-    Quiero que las próximas rutinas se adapten a mi progreso y a mi historial de entrenamiento para que sean desafiantes pero seguras.`
+Escribe tus objetivos medibles:
+-
+
+━━━━━━━━━━━━━━━━━━
+TU PUNTO DE PARTIDA
+
+Hoy puedo hacer:
+Ej: 3x7 flexiones, 30s plancha, etc.
+
+Limitaciones actuales:
+Ej: poca fuerza, baja resistencia, falta de técnica, etc.
+
+Lesiones o zonas a cuidar:
+Ej: lumbares, rodillas, hombros, ninguna, etc.
+
+━━━━━━━━━━━━━━━━━━
+PREFERENCIAS DE ENTRENAMIENTO
+
+Ejemplos:
+• No repetir músculos en días consecutivos
+• Entrenar todo el cuerpo durante la semana
+• Combinar tren superior, inferior y core
+
+Escribe tus preferencias:
+-
+
+━━━━━━━━━━━━━━━━━━
+IMPORTANTE
+
+Quiero que las rutinas se adapten a mi progreso y a mi historial de entrenamiento para que sean desafiantes pero seguras.`
 
 export default function EditableObjectiveForm({
   initial,
 }: {
   initial: string | null;
 }) {
-  const [value, setValue] = useState(initial ?? "");
+  const [value, setValue] = useState(initial ?? objectivePlaceHolder);
   const [saving, setSaving] = useState(false);
 
   const handleSave = async (e: React.FormEvent) => {
@@ -95,7 +118,6 @@ export default function EditableObjectiveForm({
         </label>
         <textarea
           value={value}
-          placeholder={objectivePlaceHolder}
           onChange={(e) => setValue(e.target.value)}
           className="w-full flex-1 p-3 rounded border border-border resize-none overflow-y-auto"
         />
