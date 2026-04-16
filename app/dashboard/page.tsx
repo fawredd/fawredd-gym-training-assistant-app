@@ -154,9 +154,17 @@ export default async function DashboardPage() {
     }
   }
 
+    
   const muscleGroups = Object.entries(muscleGroupDays)
     .map(([nombre, days]) => ({ nombre, dias: days.size }))
     .sort((a, b) => b.dias - a.dias);
+
+  if (process.env.NODE_ENV === 'development'){
+    console.log('Muscle group days:', muscleGroupDays);
+    console.log('Muscle groups:', muscleGroups);
+    console.log('Period workouts', periodWorkouts);
+    console.log('->workouts.exercises', periodWorkouts.map((w) => w.exercises.map((ex) => ex)));
+  }  
 
   // Muscle group progress over time (for potential future use in a graph)
   const chartData = await buildChartData(periodWorkouts);

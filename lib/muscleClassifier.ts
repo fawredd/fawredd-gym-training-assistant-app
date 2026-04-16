@@ -24,6 +24,7 @@ export const MUSCLE_GROUPS = [
   "Gemelos",
   "Abdominales",
   "Core",
+  "Flexiones de brazos",
 ] as const;
 
 export type MuscleGroup = (typeof MUSCLE_GROUPS)[number] | `Otros - ${string}`;
