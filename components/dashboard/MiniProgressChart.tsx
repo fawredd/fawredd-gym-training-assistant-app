@@ -9,28 +9,21 @@ import {
   Tooltip,
 } from "recharts";
 
-type DataPoint = {
-  column: number;
-  totalReps: number;
-  totalWeight: number;
-};
+import type {TrainingProgress} from "../../lib/muscleGraphData";
 
 interface MiniProgressChartProps {
-  data: DataPoint[];
-  variant?: "volume" | "weight";
+  data: TrainingProgress[];
 }
 
 export default function MiniProgressChart({
   data,
-  variant = "volume",
 }: MiniProgressChartProps) {
   // Elegimos qué métrica mostrar
-  const dataKey =
-    variant === "volume" ? "totalWeight" : "totalReps";
-
+  const dataKey = "totalMeasure"; // Puedes cambiar esto a "volume" o "intensity" según lo que quieras mostrar  
+  
   return (
-    <div className="w-full min-h-20px h-[20px] p-0 m-0">
-      <ResponsiveContainer width="100%" height="100%" className="min-w-0 bg-red p-0 m-0">
+    <div className="w-full p-0 m-0">
+      <ResponsiveContainer width="100%" height={20} className="min-w-0 bg-red p-0 m-0">
 {/*         <LineChart data={data}>
           <Line
             type="monotone"

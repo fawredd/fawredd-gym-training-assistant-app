@@ -177,7 +177,11 @@ export default async function DashboardPage() {
   const latestMemoryFecha = latestMemory?.fecha
     ? latestMemory.fecha.toISOString()
     : null;
-
+    
+  if (process.env.NODE_ENV === 'development'){
+		console.log("muscle groups",JSON.stringify(muscleGroups))
+		console.log("Training days",JSON.stringify(uniqueTrainingDays))
+	}
   return (
     <ThemeProvider>
       <div className="min-h-screen bg-background text-foreground flex flex-col">

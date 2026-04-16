@@ -142,3 +142,21 @@ export const TrainingStatesRelations = relations(trainingStates, ({ one }) => ({
     references: [users.id],
   }),
 }));
+
+// SELECT types (lo que devuelve una query)
+export type User              = typeof users.$inferSelect;
+export type Workout           = typeof workouts.$inferSelect;
+export type WorkoutExercise   = typeof workoutExercises.$inferSelect;
+export type AiMemory          = typeof aiMemories.$inferSelect;
+export type AiLog             = typeof aiLogs.$inferSelect;
+export type TrainingObjective = typeof trainingObjectives.$inferSelect;
+export type TrainingState     = typeof trainingStates.$inferSelect;
+
+// INSERT types (para crear registros — campos con default son opcionales)
+export type NewUser              = typeof users.$inferInsert;
+export type NewWorkout           = typeof workouts.$inferInsert;
+export type NewWorkoutExercise   = typeof workoutExercises.$inferInsert;
+export type NewAiMemory          = typeof aiMemories.$inferInsert;
+export type NewAiLog             = typeof aiLogs.$inferInsert;
+export type NewTrainingObjective = typeof trainingObjectives.$inferInsert;
+export type NewTrainingState     = typeof trainingStates.$inferInsert;

@@ -93,6 +93,11 @@ export async function POST() {
     orderBy: [desc(trainingStates.createdAt)],
   });
 
+const today = new Date().toLocaleString("sv-SE", { 
+  timeZone: "America/Argentina/Buenos_Aires" 
+})
+
+// Resultado: "2026-04-15 10:30:00" — formato ISO-like, legible para el modelo
   // Keep prompt concise to reduce token usage; instruct AI to be brief and output only required JSON block
   const promptText = `You are a senior fitness coach generating the NEXT workout.
 
@@ -148,6 +153,7 @@ Requirements:
 - rutina.ejercicios MUST contain 4 to 6 items.
 
 #USER DATA:
+- [Today - start]: ${today} [Today - end]
 - [Goal (written in spanish) - start]: ${latestObjective?.content ?? existingUser.objetivo ?? "General fitness"} [Goal - end]
 - [Experience - start]: ${existingUser.experiencia || "Unknown"} [Experience - end]
 - [Previous state - start]: ${latestState ? JSON.stringify(latestState) : null} [Previous state - end]

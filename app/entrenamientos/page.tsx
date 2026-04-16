@@ -46,7 +46,7 @@ export default async function EntrenamientosPage() {
   return (
     <>
       <Header userName={existingUser.nombre || "-"} />
-      <div className="max-w-5xl w-full p-4 md:p-8">
+      <div className="max-w-5xl w-full p-4 md:p-8 mx-auto">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-semibold text-primary">
             Carga de entrenamientos
@@ -93,7 +93,7 @@ export default async function EntrenamientosPage() {
                     >
                       <div className="flex justify-between items-center border-b border-border pb-3 mb-3">
                         <p className="font-semibold text-lg">
-                          {w.fecha.toLocaleDateString()}
+                          {w.fecha.toLocaleDateString('es-AR')}
                         </p>
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-1 rounded">

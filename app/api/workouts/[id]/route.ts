@@ -85,6 +85,7 @@ export async function PUT(
               series: ex.series,
               repeticiones: ex.repeticiones,
               peso: ex.peso,
+              duracionSegundos: ex.duracionSegundos,
             })),
           );
         }

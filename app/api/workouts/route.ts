@@ -58,6 +58,7 @@ export async function POST(req: NextRequest) {
                     series: ex.series,
                     repeticiones: ex.repeticiones,
                     peso: ex.peso,
+                    duracionSegundos: ex.duracionSegundos,
                 }))
             );
         }

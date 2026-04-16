@@ -12,11 +12,11 @@ export default function WorkoutForm() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0]);
     const [ejercicios, setEjercicios] = useState([
-        { nombre: '', series: 3, repeticiones: 10, peso: 0 }
+        { nombre: '', series: 3, repeticiones: 0, peso: 0, duracionSegundos: 0 },
     ]);
 
     const handleAddExercise = () => {
-        setEjercicios([...ejercicios, { nombre: '', series: 3, repeticiones: 10, peso: 0 }]);
+        setEjercicios([...ejercicios, { nombre: '', series: 3, repeticiones: 0, peso: 0, duracionSegundos: 0 }]);
     };
 
     const handleExerciseChange = (index: number, field: string, value: string | number) => {
@@ -43,7 +43,7 @@ export default function WorkoutForm() {
             });
 
             if (res.ok) {
-                setEjercicios([{ nombre: '', series: 3, repeticiones: 10, peso: 0 }]);
+                setEjercicios([{ nombre: '', series: 3, repeticiones: 0, peso: 0, duracionSegundos: 0 }]);
                 router.refresh();
             } else {
                 alert("Error al guardar entrenamiento");
@@ -90,15 +90,19 @@ export default function WorkoutForm() {
                             <div className="grid grid-cols-3 gap-3">
                                 <div className="space-y-2">
                                     <Label htmlFor={`series-${i}`}>Series</Label>
-                                    <Input id={`series-${i}`} type="number" required min="1" value={ex.series} onChange={(e) => handleExerciseChange(i, 'series', parseInt(e.target.value))} />
+                                    <Input id={`series-${i}`} type="number" required min="0" value={ex.series} onChange={(e) => handleExerciseChange(i, 'series', parseInt(e.target.value))} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor={`reps-${i}`}>Reps</Label>
-                                    <Input id={`reps-${i}`} type="number" required min="1" value={ex.repeticiones} onChange={(e) => handleExerciseChange(i, 'repeticiones', parseInt(e.target.value))} />
+                                    <Input id={`reps-${i}`} type="number" required min="0" value={ex.repeticiones} onChange={(e) => handleExerciseChange(i, 'repeticiones', parseInt(e.target.value))} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor={`peso-${i}`}>Peso(kg)</Label>
                                     <Input id={`peso-${i}`} type="number" required min="0" value={ex.peso} onChange={(e) => handleExerciseChange(i, 'peso', parseFloat(e.target.value))} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor={`duracion-${i}`}>Duración(seg)</Label>
+                                    <Input id={`duracion-${i}`} type="number" required min="0" value={ex.duracionSegundos} onChange={(e) => handleExerciseChange(i, 'duracionSegundos', parseFloat(e.target.value))} />
                                 </div>
                             </div>
                         </CardContent>

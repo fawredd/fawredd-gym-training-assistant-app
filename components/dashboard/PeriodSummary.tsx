@@ -9,7 +9,7 @@ interface MuscleGroup {
 interface PeriodSummaryProps {
     muscleGroups: MuscleGroup[]; // sorted desc
     totalDays: number; 
-    chartData: ChartData; // for potential future use in a graph
+    chartData: ChartData;
 }
 
 // Map of keywords in exercise names → muscle group labels

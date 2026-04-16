@@ -103,7 +103,9 @@ const SIMPLE_KEYWORDS: [string, MuscleGroup][] = [
   ["press", "Pecho"],   // fallback: sin calificador → pecho es más común
   ["aperturas", "Pecho"],
   ["fly", "Pecho"],
-  ["flexion", "Pecho"],
+	
+	//Flexiones de brazos
+  ["flexion", "Flexiones de brazos"],
 
   // --- Espalda Alta ---
   ["remo", "Espalda Alta"],
@@ -210,7 +212,8 @@ Ejercicio: "${nombre}"
 Responde SOLO con uno de estos grupos:
 ${MUSCLE_GROUPS.join(", ")}
 Si el ejercicio trabaja principalmente el core/estabilizadores, responde "Core".
-Si es un ejercicio abdominal de contracción, responde "Abdominales".`,
+Si es un ejercicio abdominal de contracción, responde "Abdominales".`
+Si el ejercicio es flexiones de brazos, responde "Flexiones",
     });
 
     return object.group;
