@@ -16,6 +16,7 @@ import { streamText } from "ai";
 import { kv } from "@vercel/kv";
 import { parseAIResponse, TrainingState } from "@/lib/ai-response";
 import { mapTrainingStateToDB } from "@/lib/training-state-utils";
+import { format } from "date-fns";
 
 const openrouter = createOpenRouter({
   apiKey: process.env.OPENROUTER_API_KEY,
@@ -24,7 +25,7 @@ const openrouter = createOpenRouter({
 // Trim helpers to limit stored token sizes
 const MAX_REQUEST_PAYLOAD = 2000;
 const MAX_RESPONSE_PAYLOAD = 4000;
-const MAX_MEMORY_CONTENT = 2000;
+//const MAX_MEMORY_CONTENT = 2000;
 
 function trimPayload(s: string | null | undefined, max: number) {
   if (!s) return s ?? null;
@@ -71,14 +72,15 @@ export async function POST() {
     with: { exercises: true },
   });
 
-  const recentWorkouts = recentWorkoutsRaw.map((w) => ({
-    id: w.id,
+  const recentWorkouts = recentWorkoutsRaw.map((w,i) => ({
+    id: `workout-${i}`, // avoid exposing real IDs
     fecha: w.fecha,
     exercises: w.exercises.map((e) => ({
       nombre: e.nombre,
       series: e.series,
       repeticiones: e.repeticiones,
       peso: e.peso,
+      grupoMuscular: e.grupoMuscular,
     })),
   }));
 
@@ -93,11 +95,8 @@ export async function POST() {
     orderBy: [desc(trainingStates.createdAt)],
   });
 
-const today = new Date().toLocaleString("sv-SE", { 
-  timeZone: "America/Argentina/Buenos_Aires" 
-})
+const today = format(new Date(),'yyyy-MM-dd')
 
-// Resultado: "2026-04-15 10:30:00" — formato ISO-like, legible para el modelo
   // Keep prompt concise to reduce token usage; instruct AI to be brief and output only required JSON block
   const promptText = `You are a senior fitness coach generating the NEXT workout.
 
@@ -124,9 +123,9 @@ The workout MUST mix:
 Requirements:
 - At least 1 known exercise
 - At least 1 new exercise
-- Total exercises: 4–6
-- New exercises must be realistic, safe for lumbar L4-L5 and fit a commercial gym.
-- New exercises must be a progression or variation of movement patterns found in history (push, pull, squat, hinge, lunge, core, shoulders, arms).
+- Total exercises: 7–10
+- New exercises must be realistic and fit a commercial gym.
+- New exercises must be a progression or variation of movement patterns found in history (push, pull, squat, hinge, lunge, core, shoulders, arms, legs, core).
 
 ##PROGRESSION
 - Apply small progressive overload when possible.
@@ -157,7 +156,19 @@ Requirements:
 - [Goal (written in spanish) - start]: ${latestObjective?.content ?? existingUser.objetivo ?? "General fitness"} [Goal - end]
 - [Experience - start]: ${existingUser.experiencia || "Unknown"} [Experience - end]
 - [Previous state - start]: ${latestState ? JSON.stringify(latestState) : null} [Previous state - end]
-- [Last workouts (exercises are written in spanish mostly or english. workouts data format is: ${JSON.stringify(typeof recentWorkouts)}) - start]: ${JSON.stringify(recentWorkouts)} [Last workouts - end]
+- [Last workouts (exercises are written in spanish mostly or english. workouts data format is: 
+recentWorkouts: {
+    id: string;
+    fecha: string;
+    exercises: {
+        nombre: string;
+        series: number | null;
+        repeticiones: number | null;
+        peso: number | null;
+        grupoMuscular: string;
+    }[];
+}[]) - start]: ${JSON.stringify(recentWorkouts)}
+[Last workouts - end]
 ## TRAINING STATE (COACH MEMORY SUMMARY)
 
 training_state is a compressed strategic summary of the user's training evolution.
@@ -227,6 +238,7 @@ Fields:
     try {
       const result = streamText({
         model: google("gemini-3.1-flash-lite-preview"),
+        //model: google("gemini-3.1-pro-preview"),
         prompt: promptText,
         topP: 0.1,
         topK: 20,
@@ -238,14 +250,14 @@ Fields:
     } catch (googleError: unknown) {
       console.log("Google failed → fallback to OpenRouter", googleError);
       try {
-      const result = streamText({
-        model: openrouter("openrouter/free"),
-        prompt: promptText,
-      });
+        const result = streamText({
+          model: openrouter("openrouter/free"),
+          prompt: promptText,
+        });
 
-      for await (const delta of result.textStream) {
-        text += delta;
-      }
+        for await (const delta of result.textStream) {
+          text += delta;
+        }
       } catch (openRouterError) {
         console.error("OpenRouter failed", openRouterError);
         return new NextResponse("AI Generation Error", { status: 500 });
