@@ -1,174 +1,9 @@
 {
-  "id": "21b68051-bd7d-4747-a9e0-e2ca5a0d20aa",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "00000000-0000-0000-0000-000000000000",
+  "prevId": "",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
-    "fawredd_gym.ai_logs": {
-      "name": "ai_logs",
-      "schema": "fawredd_gym",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "request_payload": {
-          "name": "request_payload",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "response_payload": {
-          "name": "response_payload",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "ai_logs_user_id_users_id_fk": {
-          "name": "ai_logs_user_id_users_id_fk",
-          "tableFrom": "ai_logs",
-          "tableTo": "users",
-          "schemaTo": "fawredd_gym",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "fawredd_gym.ai_memories": {
-      "name": "ai_memories",
-      "schema": "fawredd_gym",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "fecha": {
-          "name": "fecha",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "contenido": {
-          "name": "contenido",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "ai_memories_user_id_users_id_fk": {
-          "name": "ai_memories_user_id_users_id_fk",
-          "tableFrom": "ai_memories",
-          "tableTo": "users",
-          "schemaTo": "fawredd_gym",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "fawredd_gym.training_objectives": {
-      "name": "training_objectives",
-      "schema": "fawredd_gym",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "content": {
-          "name": "content",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "training_objectives_user_id_users_id_fk": {
-          "name": "training_objectives_user_id_users_id_fk",
-          "tableFrom": "training_objectives",
-          "tableTo": "users",
-          "schemaTo": "fawredd_gym",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "fawredd_gym.training_states": {
       "name": "training_states",
       "schema": "fawredd_gym",
@@ -184,6 +19,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
         },
         "priority_goals": {
           "name": "priority_goals",
@@ -232,13 +74,6 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
         }
       },
       "indexes": {},
@@ -260,8 +95,96 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "policies": {},
       "checkConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "fawredd_gym.workout_exercises": {
+      "name": "workout_exercises",
+      "schema": "fawredd_gym",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "workout_id": {
+          "name": "workout_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nombre": {
+          "name": "nombre",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "series": {
+          "name": "series",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "default": 1
+        },
+        "repeticiones": {
+          "name": "repeticiones",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "default": 0
+        },
+        "peso": {
+          "name": "peso",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "duracion_segundos": {
+          "name": "duracion_segundos",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "default": 0
+        },
+        "grupo_muscular": {
+          "name": "grupo_muscular",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'otros - sin definir'"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "workout_exercises_workout_id_workouts_id_fk": {
+          "name": "workout_exercises_workout_id_workouts_id_fk",
+          "tableFrom": "workout_exercises",
+          "tableTo": "workouts",
+          "schemaTo": "fawredd_gym",
+          "columnsFrom": [
+            "workout_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {},
+      "policies": {},
       "isRLSEnabled": false
     },
     "fawredd_gym.users": {
@@ -338,19 +261,19 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "users_external_auth_id_unique": {
-          "name": "users_external_auth_id_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "external_auth_id"
-          ]
+          ],
+          "nullsNotDistinct": false,
+          "name": "users_external_auth_id_unique"
         }
       },
-      "policies": {},
       "checkConstraints": {},
+      "policies": {},
       "isRLSEnabled": false
     },
-    "fawredd_gym.workout_exercises": {
-      "name": "workout_exercises",
+    "fawredd_gym.ai_memories": {
+      "name": "ai_memories",
       "schema": "fawredd_gym",
       "columns": {
         "id": {
@@ -359,55 +282,73 @@
           "primaryKey": true,
           "notNull": true
         },
-        "workout_id": {
-          "name": "workout_id",
+        "user_id": {
+          "name": "user_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "nombre": {
-          "name": "nombre",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "series": {
-          "name": "series",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "default": 1
-        },
-        "repeticiones": {
-          "name": "repeticiones",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "default": 0
-        },
-        "peso": {
-          "name": "peso",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "default": 0
-        },
-        "duracion_segundos": {
-          "name": "duracion_segundos",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "default": 0
-        },
-        "grupo_muscular": {
-          "name": "grupo_muscular",
-          "type": "text",
+        "fecha": {
+          "name": "fecha",
+          "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
-          "default": "'otros - sin definir'"
+          "default": "now()"
         },
-        "created_at": {
-          "name": "created_at",
+        "contenido": {
+          "name": "contenido",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "ai_memories_user_id_users_id_fk": {
+          "name": "ai_memories_user_id_users_id_fk",
+          "tableFrom": "ai_memories",
+          "tableTo": "users",
+          "schemaTo": "fawredd_gym",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "fawredd_gym.training_objectives": {
+      "name": "training_objectives",
+      "schema": "fawredd_gym",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "content": {
+          "name": "content",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -416,25 +357,25 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "workout_exercises_workout_id_workouts_id_fk": {
-          "name": "workout_exercises_workout_id_workouts_id_fk",
-          "tableFrom": "workout_exercises",
-          "tableTo": "workouts",
+        "training_objectives_user_id_users_id_fk": {
+          "name": "training_objectives_user_id_users_id_fk",
+          "tableFrom": "training_objectives",
+          "tableTo": "users",
           "schemaTo": "fawredd_gym",
           "columnsFrom": [
-            "workout_id"
+            "user_id"
           ],
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
+          "onDelete": "no action",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "policies": {},
       "checkConstraints": {},
+      "policies": {},
       "isRLSEnabled": false
     },
     "fawredd_gym.workouts": {
@@ -493,29 +434,88 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "policies": {},
       "checkConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "fawredd_gym.ai_logs": {
+      "name": "ai_logs",
+      "schema": "fawredd_gym",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "request_payload": {
+          "name": "request_payload",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "response_payload": {
+          "name": "response_payload",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "ai_logs_user_id_users_id_fk": {
+          "name": "ai_logs_user_id_users_id_fk",
+          "tableFrom": "ai_logs",
+          "tableTo": "users",
+          "schemaTo": "fawredd_gym",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {},
+      "policies": {},
       "isRLSEnabled": false
     }
   },
   "enums": {
     "fawredd_gym.experiencia": {
       "name": "experiencia",
-      "schema": "fawredd_gym",
       "values": [
         "principiante",
         "intermedio",
         "avanzado"
-      ]
+      ],
+      "schema": "fawredd_gym"
     },
     "fawredd_gym.objetivo": {
       "name": "objetivo",
-      "schema": "fawredd_gym",
       "values": [
         "hipertrofia",
         "fuerza",
         "mantenimiento"
-      ]
+      ],
+      "schema": "fawredd_gym"
     }
   },
   "schemas": {
@@ -526,8 +526,11 @@
   "policies": {},
   "views": {},
   "_meta": {
-    "columns": {},
     "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
     "tables": {}
   }
 }

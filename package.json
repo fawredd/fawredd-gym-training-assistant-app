@@ -7,9 +7,10 @@
     "db:init": "node scripts/init-db.js",
     "db:push": "drizzle-kit push --force",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "cross-env DEBUG=drizzle:* drizzle-kit migrate",
-    "db:build": "run db:init && drizzle-kit generate && drizzle-kit migrate",
-    "build": "pnpm run db:build && next build",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio",
+    "db:introspect":"drizzle-kit introspect",
+    "build": "pnpm run db:migrate && next build",
     "start": "next start",
     "lint": "eslint"
   },
