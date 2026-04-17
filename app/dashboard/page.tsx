@@ -26,11 +26,11 @@ import { Check, X } from "lucide-react";
 import { redirect } from "next/navigation";
 import { buildChartData } from "@/lib/muscleGraphData";
 import { AIResponse, formatAIResponseForUI } from "@/lib/ai-response";
+import { format, parseISO, subDays, startOfDay } from "date-fns";
 
 function formatDateKey(date: Date): string {
-  return date.toISOString().split("T")[0];
+  return format(date,"yyyy-MM-dd");
 }
-
 
 
 // ── Page ──────────────────────────────────────────────────────────────
@@ -71,19 +71,14 @@ export default async function DashboardPage() {
 
   // ── Dates ────────────────────────────────────────────────────────────
 
-  const twentyDaysAgo = new Date();
-  twentyDaysAgo.setDate(twentyDaysAgo.getDate() - 19);
-  twentyDaysAgo.setHours(0, 0, 0, 0);
-
-  const xDaysAgo = new Date();
-  xDaysAgo.setDate(xDaysAgo.getDate() - 19); //Number of days to summarize
-  xDaysAgo.setHours(0, 0, 0, 0);
-
+  const twentyDaysAgoStr = format(startOfDay(subDays(new Date(), 19)), "yyyy-MM-dd");
+  const xDaysAgo = startOfDay(subDays(new Date(), 19));
+  
   // ── Single query for last 20 days workouts + exercises ───────────────
   const recentWorkouts = await db.query.workouts.findMany({
     where: and(
       eq(workouts.userId, internalUser.id),
-      gte(workouts.fecha, twentyDaysAgo),
+      gte(workouts.fecha, twentyDaysAgoStr),
     ),
     orderBy: [desc(workouts.fecha)],
     with: { exercises: true },
@@ -118,7 +113,7 @@ export default async function DashboardPage() {
       userId: w.userId,
       createdAt: w.createdAt.toISOString(),
       updatedAt: w.updatedAt.toISOString(),
-      fecha: w.fecha.toISOString(),
+      fecha: w.fecha,
       exercises: w.exercises.map((ex) => ({
         id: ex.id,
         nombre: ex.nombre,
@@ -126,7 +121,7 @@ export default async function DashboardPage() {
         series: ex.series,
         repeticiones: ex.repeticiones,
         duracionSegundos: ex.duracionSegundos,
-        // 👇 este también era Date antes
+        grupoMuscular: ex.grupoMuscular,
         createdAt: ex.createdAt.toISOString(),
         workoutId: ex.workoutId,
       })),
@@ -135,20 +130,20 @@ export default async function DashboardPage() {
 
   // ── Period summary (last X days) ──────────────────────────────────────
   const periodWorkouts = recentWorkouts.filter(
-    (w) => new Date(w.fecha) >= xDaysAgo,
+    (w) => parseISO(w.fecha) >= xDaysAgo,
   );
 
   // Track unique training days
   const uniqueTrainingDays = new Set(
-    periodWorkouts.map((w) => formatDateKey(new Date(w.fecha))),
+    periodWorkouts.map((w) => formatDateKey(parseISO(w.fecha))),
   ).size;
 
   // Count muscle groups across all exercises in last 7 days
   const muscleGroupDays: Record<string, Set<string>> = {};
   for (const w of periodWorkouts) {
-    const dayKey = formatDateKey(new Date(w.fecha));
+    const dayKey = w.fecha;
     for (const ex of w.exercises) {
-      const group = await classifyExercise(ex.nombre);
+      const group = ex.grupoMuscular
       if (!muscleGroupDays[group]) muscleGroupDays[group] = new Set();
       muscleGroupDays[group].add(dayKey);
     }
@@ -158,13 +153,7 @@ export default async function DashboardPage() {
   const muscleGroups = Object.entries(muscleGroupDays)
     .map(([nombre, days]) => ({ nombre, dias: days.size }))
     .sort((a, b) => b.dias - a.dias);
-
-  if (process.env.NODE_ENV === 'development'){
-    console.log('Muscle group days:', muscleGroupDays);
-    console.log('Muscle groups:', muscleGroups);
-    console.log('Period workouts', periodWorkouts);
-    console.log('->workouts.exercises', periodWorkouts.map((w) => w.exercises.map((ex) => ex)));
-  }  
+  //console.log("Dashboard muscle groups", muscleGroups)
 
   // Muscle group progress over time (for potential future use in a graph)
   const chartData = await buildChartData(periodWorkouts);
@@ -185,11 +174,8 @@ export default async function DashboardPage() {
   const latestMemoryFecha = latestMemory?.fecha
     ? latestMemory.fecha.toISOString()
     : null;
-    
-  if (process.env.NODE_ENV === 'development'){
-		console.log("muscle groups",JSON.stringify(muscleGroups))
-		console.log("Training days",JSON.stringify(uniqueTrainingDays))
-	}
+   
+
   return (
     <ThemeProvider>
       <div className="min-h-screen bg-background text-foreground flex flex-col">

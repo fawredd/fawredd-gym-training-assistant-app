@@ -6,12 +6,6 @@ import { eq, and } from "drizzle-orm";
 import Link from "next/link";
 import EditableWorkoutForm from "../../EditableWorkoutForm";
 
-function toDateInputValue(date: Date) {
-  const offset = date.getTimezoneOffset()
-  const local = new Date(date.getTime() - offset * 60 * 1000)
-  return local.toISOString().split("T")[0]
-}
-
 export default async function EditWorkoutPage({
     params,
 }: {
@@ -71,7 +65,7 @@ export default async function EditWorkoutPage({
             </div>
             <EditableWorkoutForm
                 workoutId={workout.id}
-                initialFecha={toDateInputValue(workout.fecha)}
+                initialFecha={workout.fecha}
                 initialExercises={initialExercises}
                 mode="edit"
             />

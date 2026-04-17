@@ -3,6 +3,21 @@ import { auth } from "@clerk/nextjs/server";
 import { db } from "../../../../db";
 import { workouts, workoutExercises, users } from "../../../../db/schema";
 import { eq, and } from "drizzle-orm";
+import { MuscleGroup, classifyExercise } from "@/lib/muscleClassifier";
+
+interface Exercise {
+  nombre: string;
+  series: number;
+  repeticiones?: number;
+  peso?: number;
+  duracionSegundos?: number;
+  grupoMuscular?: MuscleGroup;
+}
+
+type CreateWorkoutBody = {
+  fecha: string; // "YYYY-MM-DD"
+  ejercicios: Exercise[];
+};
 
 export async function DELETE(
   req: NextRequest,
@@ -59,7 +74,7 @@ export async function PUT(
       status: 403,
     });
 
-  const body = await req.json();
+  const body: CreateWorkoutBody = await req.json();
   const { fecha, ejercicios } = body;
 
   try {
@@ -68,7 +83,7 @@ export async function PUT(
       if (fecha) {
         await tx
           .update(workouts)
-          .set({ fecha: new Date(fecha), updatedAt: new Date() })
+          .set({ fecha, updatedAt: new Date() })
           .where(eq(workouts.id, id));
       }
 
@@ -77,8 +92,8 @@ export async function PUT(
           .delete(workoutExercises)
           .where(eq(workoutExercises.workoutId, id));
         if (ejercicios.length > 0) {
-          await tx.insert(workoutExercises).values(
-            ejercicios.map((ex: any) => ({
+          const rows = await Promise.all(
+            ejercicios.map(async (ex: Exercise) => ({
               id: crypto.randomUUID(),
               workoutId: id,
               nombre: ex.nombre,
@@ -86,8 +101,10 @@ export async function PUT(
               repeticiones: ex.repeticiones,
               peso: ex.peso,
               duracionSegundos: ex.duracionSegundos,
+              grupoMuscular: await classifyExercise(ex.nombre),
             })),
           );
+          await tx.insert(workoutExercises).values(rows);
         }
       }
     });

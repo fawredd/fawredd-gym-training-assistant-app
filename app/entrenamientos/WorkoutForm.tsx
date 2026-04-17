@@ -6,11 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
+import {format, parseISO} from 'date-fns'
 
 export default function WorkoutForm() {
     const router = useRouter();
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0]);
+    const [fecha, setFecha] = useState(format(new Date(), 'yyyy-MM-dd'));
     const [ejercicios, setEjercicios] = useState([
         { nombre: '', series: 3, repeticiones: 0, peso: 0, duracionSegundos: 0 },
     ]);
@@ -64,7 +65,7 @@ export default function WorkoutForm() {
                     type="date"
                     required
                     value={fecha}
-                    onChange={(e) => setFecha(e.target.value)}
+                    onChange={(e) => setFecha(format(parseISO(e.target.value), 'yyyy-MM-dd'))}
                 />
             </div>
 

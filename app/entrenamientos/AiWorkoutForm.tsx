@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { format, parseISO } from 'date-fns';
 
 export default function AiWorkoutForm() {
     const router = useRouter();
@@ -46,7 +47,7 @@ export default function AiWorkoutForm() {
                     id="refDate"
                     required
                     value={referenceDate}
-                    onChange={(e) => setReferenceDate(e.target.value)}
+                    onChange={(e) => setReferenceDate(format(parseISO(e.target.value), 'yyyy-MM-dd'))}
                 />
             </div>
             <div className="space-y-2">

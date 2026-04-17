@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
         await db.insert(workouts).values({
             id: workoutId,
             userId: existingUser.id,
-            fecha: new Date(fecha),
+            fecha,
         });
 
         // Create the exercises if any
@@ -59,6 +59,7 @@ export async function POST(req: NextRequest) {
                     repeticiones: ex.repeticiones,
                     peso: ex.peso,
                     duracionSegundos: ex.duracionSegundos,
+                    grupoMuscular: ex.grupoMuscular,
                 }))
             );
         }

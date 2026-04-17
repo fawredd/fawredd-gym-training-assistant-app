@@ -1,5 +1,5 @@
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
-import { generateObject } from "ai";
+// import { generateObject } from "ai";
 import { z } from "zod";
 
 const openrouter = createOpenRouter({
@@ -26,6 +26,13 @@ export const MUSCLE_GROUPS = [
   "Core",
   "Flexiones de brazos",
 ] as const;
+
+export const muscleGroupSchema = z.union([
+  z.enum(MUSCLE_GROUPS),
+  z.string().startsWith("Otros - ", { 
+    message: "Si no es un grupo estándar, debe empezar con 'Otros - '" 
+  })
+]);
 
 export type MuscleGroup = (typeof MUSCLE_GROUPS)[number] | `Otros - ${string}`;
 
@@ -71,7 +78,6 @@ const SPECIFIC_RULES: { keywords: string[]; group: MuscleGroup }[] = [
   { keywords: ["hammer", "curl"], group: "Bíceps" },
 
   // --- CALISTENIA ---
-  { keywords: ["push", "up"], group: "Pecho" },
   { keywords: ["pull", "up"], group: "Espalda Alta" },
   { keywords: ["chin", "up"], group: "Espalda Alta" },
   { keywords: ["fondos", "paralelas"], group: "Pecho" },

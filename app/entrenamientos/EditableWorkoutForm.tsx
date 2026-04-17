@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
+import {format, parseISO} from 'date-fns'
 
 interface Exercise {
   nombre: string;
@@ -115,7 +116,7 @@ export default function EditableWorkoutForm({
           type="date"
           required
           value={fecha}
-          onChange={(e) => setFecha(e.target.value)}
+          onChange={(e) => setFecha(format(parseISO(e.target.value), 'yyyy-MM-dd'))}
         />
       </div>
 

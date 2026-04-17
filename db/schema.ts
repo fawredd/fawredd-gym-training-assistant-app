@@ -2,8 +2,8 @@ import {
   pgSchema,
   text,
   timestamp,
-  integer,
-  pgEnum,
+  integer, 
+  date
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -38,7 +38,7 @@ export const workouts = fawreddGymSchema.table("workouts", {
   userId: text("user_id")
     .notNull()
     .references(() => users.id),
-  fecha: timestamp("fecha").notNull(),
+  fecha: date("fecha",{ mode: "string"}).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -53,6 +53,7 @@ export const workoutExercises = fawreddGymSchema.table("workout_exercises", {
   repeticiones: integer("repeticiones").default(0),
   peso: integer("peso").default(0),
   duracionSegundos: integer("duracion_segundos").default(0),
+  grupoMuscular: text("grupo_muscular").notNull().default("otros - sin definir"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

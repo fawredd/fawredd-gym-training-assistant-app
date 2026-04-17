@@ -14,6 +14,7 @@ import {
   AccordionContent,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { format, parseISO } from 'date-fns'
 
 export default async function EntrenamientosPage() {
   const { userId } = await auth();
@@ -93,12 +94,13 @@ export default async function EntrenamientosPage() {
                     >
                       <div className="flex justify-between items-center border-b border-border pb-3 mb-3">
                         <p className="font-semibold text-lg">
-                          {w.fecha.toLocaleDateString('es-AR')}
-                        </p>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-1 rounded">
+                          {format(parseISO(w.fecha), "dd/MM/yyyy")}
+                          <span>{" | "}</span>
+                          <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-1 rounded mr-2">
                             {w.exercises.length} ejercicios
                           </span>
+                        </p>
+                        <div className="flex items-center gap-2">
                           <Link
                             href={`/entrenamientos/${w.id}/edit`}
                             className="text-xs font-medium text-primary hover:underline"
@@ -114,7 +116,7 @@ export default async function EntrenamientosPage() {
                             key={ex.id}
                             className="flex justify-between items-center"
                           >
-                            <span className="font-medium">{ex.nombre}</span>
+                            <span className="font-medium">{ex.grupoMuscular}: {ex.nombre}</span>
                             <span className="text-muted-foreground">
                               {ex.duracionSegundos &&
                               ex.duracionSegundos > 0 ? (

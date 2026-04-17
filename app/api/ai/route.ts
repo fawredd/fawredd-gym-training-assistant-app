@@ -235,8 +235,8 @@ Fields:
       for await (const delta of result.textStream) {
         text += delta;
       }
-    } catch (googleError) {
-      console.log("Google failed → fallback to OpenRouter");
+    } catch (googleError: unknown) {
+      console.log("Google failed → fallback to OpenRouter", googleError);
       try {
       const result = streamText({
         model: openrouter("openrouter/free"),
