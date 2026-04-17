@@ -74,7 +74,7 @@ export function DatePickerInput({onDateChange, dateArg}: DatePickerInputsSchema)
         />
         <InputGroupAddon align="inline-end">
           <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
+            <PopoverTrigger render={
               <InputGroupButton
                 id="date-picker"
                 variant="ghost"
@@ -84,7 +84,7 @@ export function DatePickerInput({onDateChange, dateArg}: DatePickerInputsSchema)
                 <CalendarIcon />
                 <span className="sr-only">Select date</span>
               </InputGroupButton>
-            </PopoverTrigger>
+            } />
             <PopoverContent
               className="w-auto overflow-hidden p-0"
               align="end"
