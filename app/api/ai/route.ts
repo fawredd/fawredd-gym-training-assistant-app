@@ -123,7 +123,7 @@ The workout MUST mix:
 Requirements:
 - At least 1 known exercise
 - At least 1 new exercise
-- Total exercises: 7–10
+- Total exercises to introduce: from 7 to 10
 - New exercises must be realistic and fit a commercial gym.
 - New exercises must be a progression or variation of movement patterns found in history (push, pull, squat, hinge, lunge, core, shoulders, arms, legs, core).
 
@@ -135,7 +135,7 @@ Requirements:
 ## EXCLUSION LOGIC (CRITICAL)
 1. Get 'fecha' from the last item in 'Last workouts'.
 2. Identify muscles: [List them].
-3. If 'fecha' is within 24 hours of "Today", the new 'grupo' MUST NOT be any of the identified muscles.
+3. If 'fecha' is within 24 hours of "Today", the new 'grupo' MUST NOT be any of the main identified muscles to introduce.
 
 ## SAFETY & GOAL LOGIC
 - **Scan:** Extract injuries (L4-L5, etc.) and targets (Flexiones, etc.) from [Goal].
@@ -149,7 +149,9 @@ Requirements:
 - Spanish only
 - series and reps must be numbers
 - No extra text
-- rutina.ejercicios MUST contain 4 to 6 items.
+- rutina.ejercicios MUST contain 7 to 10 items.
+- introduce at leat 2 ejercises per muscle group for the user to train.
+- if last workout is today, tell the user the exercises are for the next day of training.
 
 #USER DATA:
 - [Today - start]: ${today} [Today - end]

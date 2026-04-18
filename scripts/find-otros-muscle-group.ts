@@ -2,12 +2,13 @@ import dotenv from "dotenv";
 dotenv.config({ path: ".env.local" });
 import { db } from "@/db";
 import { workoutExercises } from "@/db/schema";
-import { inArray } from "drizzle-orm";
+import { inArray, like } from "drizzle-orm";
 import { classifyExercise } from "@/lib/muscleClassifier";
 
 type Row = {
   id: string;
   nombre: string;
+  grupo: string;
 };
 
 async function main() {
@@ -17,19 +18,25 @@ async function main() {
     .select({
       id: workoutExercises.id,
       nombre: workoutExercises.nombre,
+      grupo: workoutExercises.grupoMuscular,
     })
-    .from(workoutExercises);
+    .from(workoutExercises)
+    .where(like(workoutExercises.grupoMuscular, '%Otro%'));
 
   console.log(`Rows: ${rows.length}`);
 
-  // 1️⃣ nombres únicos
-  const uniqueNames = [...new Set(rows.map(r => r.nombre))];
-  console.log(`Unique exercises: ${uniqueNames.length}`);
+  // 1️⃣ grupos únicos
+  const uniqueGroups = [...new Set(rows.map(r => r.grupo))];
+  console.log(`Unique groups: ${uniqueGroups.length}`);
 
-  // 2️⃣ clasificar en paralelo
+  // 2️⃣ nombres únicos
+  const uniqueNames = [...new Set(rows.map(r => r.nombre))];
+  console.log(`Unique names: ${uniqueNames.length}`);
+
+/*   // 2️⃣ clasificar en paralelo
   console.log("🧠 Classifying exercises...");
   const classifications = await Promise.all(
-    uniqueNames.map(async (name) => ({
+    uniqueGroups.map(async (name) => ({
       name,
       group: await classifyExercise(name),
     }))
@@ -74,7 +81,10 @@ async function main() {
       console.log(`✏️ Updated ${totalUpdated}/${rows.length}`);
     }
   }
-
+ */  
+  
+  console.log(`Muscle group "Otros" detected: ${uniqueGroups}`);
+  console.log(`Unique names related to 'Otros' groups: ${uniqueNames}`);
   console.log("✅ DONE");
 }
 

@@ -19,12 +19,13 @@ export const MUSCLE_GROUPS = [
   "Cuádriceps",
   "Isquiotibiales",
   "Aductores",
-  "Abductores",
-  "Glúteos",
+  "Glúteos medio y menor",
+  "Glúteo mayor",
   "Gemelos",
   "Abdominales",
   "Core",
   "Flexiones de brazos",
+  "Aerobico",
 ] as const;
 
 export const muscleGroupSchema = z.union([
@@ -89,14 +90,38 @@ const SPECIFIC_RULES: { keywords: string[]; group: MuscleGroup }[] = [
   { keywords: ["hollow"], group: "Core" },
 
   // --- CADENA POSTERIOR ---
-  { keywords: ["hip", "thrust"], group: "Glúteos" },
+  { keywords: ["hip", "thrust"], group: "Glúteo mayor" },
   { keywords: ["peso", "muerto"], group: "Espalda Baja" },
   { keywords: ["deadlift"], group: "Espalda Baja" },
   { keywords: ["romanian"], group: "Isquiotibiales" }, // RDL → isquios
 
   // --- PIERNAS / MÁQUINAS ---
-  { keywords: ["zancadas"], group: "Glúteos" },
-  { keywords: ["lunges"], group: "Glúteos" },
+  { keywords: ["zancadas"], group: "Cuádriceps" },
+  { keywords: ["lunges"], group: "Cuádriceps" },
+
+  // --- PIERNAS / GEMELOS ---
+  { keywords: ["elevacion", "talon"], group: "Gemelos" },
+  // Espinales → espalda baja
+  { keywords: ["espinal"], group: "Espalda Baja" },
+
+  // Pájaros (deltoide posterior) → hombros
+  { keywords: ["pajaro"], group: "Hombros" },
+  { keywords: ["deltoide", "posterior"], group: "Hombros" },
+
+  // Fondos asistidos → tríceps
+  { keywords: ["fondos", "asistidos"], group: "Tríceps" },
+
+  // Circuitos → core (decisión práctica consistente)
+  { keywords: ["circuito"], group: "Core" },
+
+  // Movilidad + estiramientos → core
+  { keywords: ["movilidad", "estiramiento"], group: "Core" },
+
+  // Descanso activo → aeróbico
+  { keywords: ["descanso", "activo"], group: "Aerobico" },
+
+  // Natación con texto largo → aeróbico
+  { keywords: ["natacion"], group: "Aerobico" },
 ];
 
 // ==============================
@@ -153,13 +178,13 @@ const SIMPLE_KEYWORDS: [string, MuscleGroup][] = [
   ["aductor", "Aductores"],
 
   // --- Abductores ---
-  ["abduccion", "Abductores"],  // ← "maquina abduccion sentado" ✓
-  ["abductor", "Abductores"],
+  ["abduccion", "Glúteos medio y menor"],  // ← "maquina abduccion sentado" ✓
+  ["abductor", "Glúteos medio y menor"],
 
   // --- Glúteos ---
-  ["gluteo", "Glúteos"],
-  ["puente", "Glúteos"],
-  ["hip", "Glúteos"],
+  ["gluteo", "Glúteo mayor"],
+  ["puente", "Glúteo mayor"],
+  ["hip", "Glúteo mayor"],
 
   // --- Gemelos ---
   ["gemelo", "Gemelos"],
@@ -179,6 +204,18 @@ const SIMPLE_KEYWORDS: [string, MuscleGroup][] = [
   ["russian", "Core"],
   ["burpee", "Core"],
   ["mountain", "Core"],
+   // Aeróbico (cardio puro)
+  ["bicicleta", "Aerobico"],
+  ["cinta", "Aerobico"],
+  ["trote", "Aerobico"],
+  ["eliptico", "Aerobico"],
+  ["caminar", "Aerobico"],
+  ["caminata", "Aerobico"],
+  ["jumping", "Aerobico"],
+
+  // Estiramientos / movilidad (fallback si no entra en específica)
+  ["estiramiento", "Core"],
+  ["movilidad", "Core"],
 ];
 
 // ==============================

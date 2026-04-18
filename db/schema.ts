@@ -53,7 +53,7 @@ export const workoutExercises = fawreddGymSchema.table("workout_exercises", {
   repeticiones: integer("repeticiones").default(0),
   peso: integer("peso").default(0),
   duracionSegundos: integer("duracion_segundos").default(0),
-  grupoMuscular: text("grupo_muscular").notNull().default("otros - sin definir"),
+  grupoMuscular: text("grupo_muscular").notNull().default("Otros - sin definir"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

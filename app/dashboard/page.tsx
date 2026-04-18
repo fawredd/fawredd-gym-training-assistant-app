@@ -27,6 +27,7 @@ import { redirect } from "next/navigation";
 import { buildChartData } from "@/lib/muscleGraphData";
 import { AIResponse, formatAIResponseForUI } from "@/lib/ai-response";
 import { format, parseISO, subDays, startOfDay } from "date-fns";
+import { AITrainingState } from "@/components/dashboard/ai-training-state";
 
 function formatDateKey(date: Date): string {
   return format(date,"yyyy-MM-dd");
@@ -229,6 +230,7 @@ export default async function DashboardPage() {
             contenido={latestMemory ? formatAIResponseForUI(JSON.parse(latestMemory.contenido) as AIResponse) : null}
             fecha={latestMemoryFecha}
           />
+          <AITrainingState />
           <PeriodSummary
             muscleGroups={muscleGroups}
             totalDays={uniqueTrainingDays}
