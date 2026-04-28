@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react'
 import { subscribeUser, unsubscribeUser, sendNotification } from '@/app/pwa-actions'
+import { Button } from '../ui/button'
 
 // Converts the VAPID public key from Base64 to Uint8Array (required by PushManager API)
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
@@ -203,31 +204,41 @@ function detectInstallContext() {
   return { isIOS: Boolean(isIOS), isStandalone }
 }
 
+
+
 export function InstallPrompt() {
   const [deviceInfo] = useState(detectInstallContext)
-
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
+  useEffect(() => {
+    const handler = (e: any) => {
+      e.preventDefault()
+      setDeferredPrompt(e)
+    }
+    window.addEventListener('beforeinstallprompt', handler)
+    return () => window.removeEventListener('beforeinstallprompt', handler)
+  }, [])
   if (deviceInfo.isStandalone) return null
 
+  const installApp = async () => {
+    if (deviceInfo.isIOS) {
+      alert(`Toca el botón compartir y luego Agregar a pantalla de inicio`)
+      return
+    }
+
+    if (!deferredPrompt) return
+    deferredPrompt.prompt()
+    const { outcome } = await deferredPrompt.userChoice
+    setDeferredPrompt(null)
+    if (outcome === 'accepted') {
+      console.log('App installed')
+    }
+  }
+
   return (
-    <div className="bg-card p-4 rounded-xl shadow-sm border border-border">
-      <h3 className="text-sm font-semibold mb-2">App Progresiva</h3>
-      <div className="space-y-2">
-        <p className="text-sm text-muted-foreground">
-          Instala la app en tu dispositivo para acceso rápido.
-        </p>
-        <button className="hidden w-full px-4 py-2 text-sm font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition">
-          Instalar App
-        </button>
-        {deviceInfo.isIOS && (
-          <div className="text-xs text-muted-foreground bg-muted rounded-lg p-3">
-            <p className="mb-1 font-medium text-foreground">En iOS:</p>
-            <p>
-              Toca el botón compartir <span role="img" aria-label="share icon">⎋</span> y luego 
-              <span className="font-semibold italic"> &quot;Agregar a pantalla de inicio&quot;</span> <span role="img" aria-label="plus icon">➕</span>
-            </p>
-          </div>
-        )}
-      </div>
-    </div>
+    <>
+      <Button variant="link" size="xs" onClick={installApp}>
+        Instalar App
+      </Button>
+    </>
   )
 }

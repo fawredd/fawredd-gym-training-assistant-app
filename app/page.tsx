@@ -1,7 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import Link from 'next/link';
 import { redirect } from "next/navigation";
-import { InstallPrompt } from "@/components/pwa/pwa-components";
 
 export default async function Home() {
   const { userId } = await auth();
@@ -26,14 +25,10 @@ export default async function Home() {
             Iniciar Sesión
           </Link>
         </div>
-        
-        <div className="max-w-xs mx-auto pt-8">
-          <InstallPrompt />
-        </div>
       </div>
 
       <div className="absolute bottom-8 text-center text-sm text-muted-foreground">
-        <p>Registra tus rutinas, controla tu volumen térmico y mejora tus marcas.</p>
+        <p className="px-2">Registra tus rutinas, controla tu volumen térmico y mejora tus marcas.</p>
       </div>
     </div>
   );

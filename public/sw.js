@@ -1,5 +1,15 @@
 // Fawredd Gym Assistant — Service Worker
 
+self.addEventListener('install', () => {
+  console.log('Service Worker installed')
+  self.skipWaiting()
+})
+
+self.addEventListener('activate', () => {
+  console.log('Service Worker activated')
+  self.clients.claim()
+})
+
 // Handle incoming push messages
 self.addEventListener('push', function (event) {
   if (event.data) {

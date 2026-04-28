@@ -28,7 +28,7 @@ import { buildChartData } from "@/lib/muscleGraphData";
 import { AIResponse, formatAIResponseForUI } from "@/lib/ai-response";
 import { format, parseISO, subDays, startOfDay } from "date-fns";
 import { AITrainingState } from "@/components/dashboard/ai-training-state";
-import { PushNotificationManager, InstallPrompt } from "@/components/pwa/pwa-components";
+import { PushNotificationManager} from "@/components/pwa/pwa-components";
 
 function formatDateKey(date: Date): string {
   return format(date,"yyyy-MM-dd");
@@ -238,11 +238,6 @@ export default async function DashboardPage() {
             chartData={chartData}
           />
           <TrainingCalendar workoutsByDate={workoutsByDate} />
-          
-          <div className="flex flex-col gap-4 px-4 pb-8">
-            <InstallPrompt />
-            <PushNotificationManager />
-          </div>
         </main>
       </div>
     </ThemeProvider>

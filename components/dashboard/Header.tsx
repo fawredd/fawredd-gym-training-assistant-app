@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ThemeToggle } from "./ThemeToggle";
 import { SignOutButton } from "@clerk/nextjs";
 import { useState } from "react";
+import { InstallPrompt } from "../pwa/pwa-components";
 
 export function Header({ userName }: { userName: string }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -63,6 +64,9 @@ export function Header({ userName }: { userName: string }) {
               >
                 🏋️ Entrenamientos
               </Link>
+              
+              <InstallPrompt />
+              
               <SignOutButton>
                 <button
                   onClick={() => setMenuOpen(false)}
