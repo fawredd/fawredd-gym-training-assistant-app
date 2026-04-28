@@ -93,3 +93,46 @@ If any archived file should be reactivated, copy it back into `.agents/artifacts
 - [x] WeeklySummary with muscle group table + insights
 - [x] AIInsight block for latest memory
 - [x] Mobile-first layout (max-w-lg, vertical scroll, large touch targets)
+
+## Update: 2026-04-28 (PWA-001 completed)
+
+Implemented full Progressive Web App (PWA) functionality including web app manifest, service worker, push notifications, and offline installation prompts.
+
+### New Files
+
+| File | Purpose |
+| ---- | ------- |
+| `app/manifest.ts` | Next.js Web App Manifest configuration |
+| `app/pwa-actions.ts` | Server Actions for DB-backed push subscriptions |
+| `public/sw.js` | Service Worker for push event handling |
+| `components/pwa/pwa-components.tsx` | UI components for Install Prompt and Notification Manager |
+| `public/icon-192x192.png` | PWA App Icon (192x192) |
+| `public/icon-512x512.png` | PWA App Icon (512x512) |
+
+### Modified Files
+
+| File | Change |
+| ---- | ------ |
+| `db/schema.ts` | Added `push_subscriptions` table |
+| `next.config.ts` | Added security and Service Worker headers |
+| `app/dashboard/page.tsx` | Integrated PWA components |
+| `app/page.tsx` | Added Install Prompt to landing page |
+| `package.json` | Added `web-push` dependency |
+| `agents-backlog.md` | Marked PWA-001 as DONE |
+
+### Verification
+
+- [x] `pnpm run lint` → **PASS**
+- [x] `npx tsc --noEmit` → **PASS**
+- [x] `pnpm run build` → **PASS**
+- [x] Database migration (`db:push`) → **SUCCESS**
+
+### Acceptance Criteria Checklist
+
+- [x] Web Manifest served at `/manifest.webmanifest`
+- [x] App icons present in `public/`
+- [x] Service Worker registered and active
+- [x] Push Notifications (Subscribe/Unsubscribe) functional
+- [x] Subscriptions persisted to DB
+- [x] Install Prompt displays on compatible devices
+- [x] Security headers applied to SW and site

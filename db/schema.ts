@@ -2,8 +2,9 @@ import {
   pgSchema,
   text,
   timestamp,
-  integer, 
-  date
+  integer,
+  date,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -127,6 +128,28 @@ export const trainingStates = fawreddGymSchema.table("training_states", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// ─── Push Subscriptions (PWA) ────────────────────────────────────────────────
+// A user can have multiple subscriptions (different devices / browsers).
+// Browser PushSubscription serialises to { endpoint, keys: { p256dh, auth } }.
+// We store each field as a separate text column for individual queryability.
+export const pushSubscriptions = fawreddGymSchema.table(
+  "push_subscriptions",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // Unique delivery URL issued by the push service (browser-specific)
+    endpoint: text("endpoint").notNull(),
+    // ECDH public key — used to encrypt the payload
+    p256dh: text("p256dh").notNull(),
+    // HMAC authentication secret
+    auth: text("auth").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [uniqueIndex("push_subscriptions_endpoint_idx").on(t.endpoint)],
+);
+
 export const TrainingObjectivesRelations = relations(
   trainingObjectives,
   ({ one }) => ({
@@ -144,6 +167,16 @@ export const TrainingStatesRelations = relations(trainingStates, ({ one }) => ({
   }),
 }));
 
+export const pushSubscriptionsRelations = relations(
+  pushSubscriptions,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [pushSubscriptions.userId],
+      references: [users.id],
+    }),
+  }),
+);
+
 // SELECT types (lo que devuelve una query)
 export type User              = typeof users.$inferSelect;
 export type Workout           = typeof workouts.$inferSelect;
@@ -152,6 +185,7 @@ export type AiMemory          = typeof aiMemories.$inferSelect;
 export type AiLog             = typeof aiLogs.$inferSelect;
 export type TrainingObjective = typeof trainingObjectives.$inferSelect;
 export type TrainingState     = typeof trainingStates.$inferSelect;
+export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;
 
 // INSERT types (para crear registros — campos con default son opcionales)
 export type NewUser              = typeof users.$inferInsert;
@@ -161,3 +195,4 @@ export type NewAiMemory          = typeof aiMemories.$inferInsert;
 export type NewAiLog             = typeof aiLogs.$inferInsert;
 export type NewTrainingObjective = typeof trainingObjectives.$inferInsert;
 export type NewTrainingState     = typeof trainingStates.$inferInsert;
+export type NewPushSubscription  = typeof pushSubscriptions.$inferInsert;

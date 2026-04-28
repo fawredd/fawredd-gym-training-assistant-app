@@ -9,6 +9,7 @@
 | TRG-001  | Triage: VercelPostgres missing_connection_string | DONE    | Infra Engineer | HIGH     | None         |
 | WORK-002 | AI NLP to DB Workout Loader (ETL)                | DONE    | Technical BA   | HIGH     | AI-001       |
 | DASH-002 | Phase 2 Dashboard Redesign (Mobile-First)        | BLOCKED | QA Engineer    | HIGH     | DASH-001     |
+| PWA-001  | Progressive Web App (PWA) Implementation        | DONE    | Frontend Agent | HIGH     | DASH-001     |
 
 ## PM Logs
 
