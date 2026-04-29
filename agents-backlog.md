@@ -52,6 +52,7 @@ Below are the recommended Phase 3 tasks. Per Workspace Governance, open a separa
 | DASH-002-F5  | Cleanup: delete orphaned `AiSuggestion.tsx`                           | TODO    | Frontend Engineer | LOW      | DASH-002     |
 | DASH-002-F6  | Refactor: extract `classifyExercise` to `lib/`                        | TODO    | Frontend Engineer | LOW      | DASH-002     |
 | TRG-NEON-001 | Triage: DB ETIMEDOUT on users query (Neon pool)                       | BLOCKED | PM                | HIGH     | INF-001      |
+| TRG-PWA-001  | Triage: VAPID public key validation error in `pwa-actions.ts`        | DONE    | Backend Engineer  | HIGH     | PWA-001      |
 
 ## Audit Findings Backlog (auto-generated)
 

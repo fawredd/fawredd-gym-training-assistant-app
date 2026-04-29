@@ -136,3 +136,23 @@ Implemented full Progressive Web App (PWA) functionality including web app manif
 - [x] Subscriptions persisted to DB
 - [x] Install Prompt displays on compatible devices
 - [x] Security headers applied to SW and site
+
+## Update: 2026-04-28 (TRG-PWA-001 completed)
+
+Fixed the PWA VAPID key validation error that caused application crashes during module evaluation.
+
+### Modified Files
+
+| File | Change |
+| ---- | ------ |
+| `app/pwa-actions.ts` | Wrapped VAPID setup in safety checks; added fallback logging |
+| `.env.local` | Updated with valid generated VAPID keys |
+| `.env.example` | Added instructions for VAPID key generation |
+| `agents-backlog.md` | Marked TRG-PWA-001 as DONE |
+
+### Verification
+
+- [x] `pnpm run lint` → **PASS**
+- [x] `npx tsc --noEmit` → **PASS**
+- [x] `pnpm run build` → **PASS**
+- [x] Manual check: VAPID keys are correctly formatted (65 bytes decoded)

@@ -6,11 +6,22 @@ import { db } from '@/db'
 import { users, pushSubscriptions } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 
-webpush.setVapidDetails(
-  'mailto:admin@fawredd.com',
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
-)
+const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY
+
+if (vapidPublicKey && vapidPrivateKey && vapidPublicKey !== 'your_public_key_here') {
+  try {
+    webpush.setVapidDetails(
+      'mailto:admin@fawredd.com',
+      vapidPublicKey,
+      vapidPrivateKey
+    )
+  } catch (error) {
+    console.error('Failed to set VAPID details for PWA:', error)
+  }
+} else {
+  console.warn('PWA: VAPID keys are missing or invalid. Push notifications disabled.')
+}
 
 // ─── Serialised shape the browser sends to us ────────────────────────────────
 // JSON.parse(JSON.stringify(pushSubscription)) yields this shape.
