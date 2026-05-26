@@ -239,7 +239,7 @@ Fields:
 
     try {
       const result = streamText({
-        model: google("gemini-3.1-flash-lite-preview"),
+        model: google("gemini-3.1-flash-lite"),
         //model: google("gemini-3.1-pro-preview"),
         prompt: promptText,
         topP: 0.1,
