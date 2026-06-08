@@ -121,16 +121,13 @@ The workout MUST mix:
 • New exercises → variation & progression
 
 Requirements:
-- At least 1 known exercise
-- At least 1 new exercise
-- Total exercises to introduce: from 7 to 10
+- Total routine time should be around 60-90 minutes.
 - New exercises must be realistic and fit a commercial gym.
 - New exercises must be a progression or variation of movement patterns found in history (push, pull, squat, hinge, lunge, core, shoulders, arms, legs, core).
 
 ##PROGRESSION
 - Apply small progressive overload when possible.
 - If a known exercise exists in history, use its latest reps/series as baseline.
-- Do not reduce volume unless fatigue_level is "alto".
 
 ## EXCLUSION LOGIC (CRITICAL)
 1. Get 'fecha' from the last item in 'Last workouts'.
@@ -147,18 +144,16 @@ Requirements:
 ##OUTPUT RULES
 - STRICT JSON ONLY
 - Spanish only
-- series and reps must be numbers
+- series,reps and weight must be numbers
 - No extra text
-- rutina.ejercicios MUST contain 7 to 10 items.
-- introduce at leat 2 ejercises per muscle group for the user to train.
 - if last workout is today, tell the user the exercises are for the next day of training.
 
 #USER DATA:
-- [Today - start]: ${today} [Today - end]
+- [Today date]: ${today}.
 - [Goal (written in spanish) - start]: ${latestObjective?.content ?? existingUser.objetivo ?? "General fitness"} [Goal - end]
 - [Experience - start]: ${existingUser.experiencia || "Unknown"} [Experience - end]
 - [Previous state - start]: ${latestState ? JSON.stringify(latestState) : null} [Previous state - end]
-- [Last workouts (exercises are written in spanish mostly or english. workouts data format is: 
+- [Last workouts (exercises are written in spanish mostly or english. workouts data json structure format is: 
 recentWorkouts: {
     id: string;
     fecha: string;
@@ -167,10 +162,10 @@ recentWorkouts: {
         series: number | null;
         repeticiones: number | null;
         peso: number | null;
+        duracionSegundos: number | null;
         grupoMuscular: string;
     }[];
-}[]) - start]: ${JSON.stringify(recentWorkouts)}
-[Last workouts - end]
+}[]) - start]: ${JSON.stringify(recentWorkouts)} [Last workouts - end]
 ## TRAINING STATE (COACH MEMORY SUMMARY)
 
 training_state is a compressed strategic summary of the user's training evolution.
@@ -204,7 +199,9 @@ Fields:
       {
         "nombre": "string",
         "series": number,
-        "reps": number
+        "reps": number, // if it's a time-based exercise, use 1 and put time in "duración"
+        "duración": number, // in seconds, if applicable
+        "peso": number, // if not applicable, set to 0
       }
     ]
   },
