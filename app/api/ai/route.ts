@@ -200,7 +200,7 @@ Fields:
         "nombre": "string",
         "series": number,
         "reps": number, // if it's a time-based exercise, use 1 and put time in "duración"
-        "duración": number, // in seconds, if applicable
+        "duracion": number, // in seconds, if applicable
         "peso": number, // if not applicable, set to 0
       }
     ]

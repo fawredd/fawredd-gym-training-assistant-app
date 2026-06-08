@@ -16,7 +16,9 @@ export interface AIResponse {
     ejercicios: {
       nombre: string;
       series: number;
-      reps: number | string; // ← el modelo libre devuelve "45 segundos" o 5
+      reps: number | string;
+      duracion: number | string; // ← el modelo libre devuelve "45 segundos" o 5
+      peso: number | string; // ← el modelo libre devuelve "20 kg" o 20
     }[];
   };
   training_state: TrainingState;
@@ -91,7 +93,26 @@ export function parseAIResponse(text: string): AIResponse | null {
 
 export function formatAIResponseForUI(data: AIResponse): string {
   const ejercicios = data.rutina.ejercicios
-    .map((ex) => `• ${ex.nombre}: ${ex.series}x${ex.reps}`)
+    .map((ex) => {
+      let detalle = "";
+
+      // 1. Si es un ejercicio basado en tiempo (isométricos como planchas)
+      if (ex.duracion && ex.duracion != 0) {
+        // Usamos las series y la duración en segundos
+        detalle = `${ex.series}x${ex.duracion}s`;
+      } 
+      // 2. Si es un ejercicio de repeticiones tradicionales
+      else {
+        detalle = `${ex.series}x${ex.reps}`;
+      }
+
+      // 3. Si además incluye peso (mayor a 0), se lo agregamos al final
+      if (ex.peso && ex.peso != 0) {
+        detalle += ` @ ${ex.peso}kg`;
+      }
+
+      return `• ${ex.nombre}: ${detalle}`;
+    })
     .join("\n");
 
   return `${data.resumen}
