@@ -56,8 +56,8 @@ export async function POST(req: Request) {
                         .describe("Name of the exercise"),
                       series: z.number().int().default(1),
                       repeticiones: z.number().int().default(0),
-                      peso: z.number().int().default(0),
                       duracionSegundos: z.number().int().default(0),
+                      peso: z.number().int().default(0),
                       grupoMuscular: muscleGroupSchema,
                     }),
                   )

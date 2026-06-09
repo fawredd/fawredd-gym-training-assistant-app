@@ -84,6 +84,37 @@ export async function POST() {
     })),
   }));
 
+  const workoutsPrompt = recentWorkouts
+  .flatMap(workout =>
+    workout.exercises.map(exercise => {
+      const notes: string[] = [];
+
+      // Extraer notas de textos entre paréntesis
+      const match = exercise.nombre.match(/\((.*?)\)/g);
+      if (match) {
+        notes.push(
+          ...match.map(m => m.replace(/[()]/g, "").trim())
+        );
+      }
+
+      // Nombre limpio sin paréntesis
+      const exerciseName = exercise.nombre
+        .replace(/\(.*?\)/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+
+      return [
+        workout.fecha,
+        exerciseName,
+        `${exercise.series ?? 0}x${exercise.repeticiones ?? 0}`,
+        `${exercise.peso ?? 0}kg`,
+        exercise.grupoMuscular,
+        notes.length ? notes.join(", ") : "-"
+      ].join(" | ");
+    })
+  )
+  .join("\n");
+
   // Fetch latest training objective and previous training state
   const latestObjective = await db.query.trainingObjectives.findFirst({
     where: eq(trainingObjectives.userId, existingUser.id),
@@ -153,19 +184,11 @@ Requirements:
 - [Goal (written in spanish) - start]: ${latestObjective?.content ?? existingUser.objetivo ?? "General fitness"} [Goal - end]
 - [Experience - start]: ${existingUser.experiencia || "Unknown"} [Experience - end]
 - [Previous state - start]: ${latestState ? JSON.stringify(latestState) : null} [Previous state - end]
-- [Last workouts (exercises are written in spanish mostly or english. workouts data json structure format is: 
-recentWorkouts: {
-    id: string;
-    fecha: string;
-    exercises: {
-        nombre: string;
-        series: number | null;
-        repeticiones: number | null;
-        peso: number | null;
-        duracionSegundos: number | null;
-        grupoMuscular: string;
-    }[];
-}[]) - start]: ${JSON.stringify(recentWorkouts)} [Last workouts - end]
+- [Last workouts - (exercises are written in spanish mostly or english.) - start]
+Format:
+Date | Exercise | Sets x Reps | Weight | Muscle Group | Notes
+${workoutsPrompt}
+[Last workouts - end]
 ## TRAINING STATE (COACH MEMORY SUMMARY)
 
 training_state is a compressed strategic summary of the user's training evolution.
