@@ -281,10 +281,15 @@ ${workoutsPrompt}
       prompt: userPrompt,
       topP: 0.1,
       topK: 20,
+      maxRetries: 0,
     });
 
-    for await (const delta of result.textStream) {
-      text += delta;
+    try {
+      for await (const chunk of result.textStream) {
+        text += chunk;
+      }
+    } catch (err) {
+      console.error("Error leyendo stream", err);
     }
 
     if (text.length > 0 && text.includes("Error")) {
