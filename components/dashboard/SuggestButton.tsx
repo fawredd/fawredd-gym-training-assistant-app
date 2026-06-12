@@ -2,27 +2,27 @@
 
 import { AIResponse, formatAIResponseForUI } from "@/lib/ai-response";
 import React, { useState } from "react";
+import { toast } from "sonner"
 
 export function SuggestButton() {
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+
+const STATUS_MESSAGES: Record<number, string> = {
+  401: "Tu sesión expiró. Por favor, volvé a iniciar sesión.",
+  404: "No encontramos tu perfil. Contactá soporte.",
+  409: "No hay entrenamientos nuevos desde tu última consulta.",
+  422: "La respuesta de la IA no pudo procesarse. Intentá de nuevo.",
+  429: "Límite de solicitudes alcanzado. Esperá un momento.",
+  500: "Error interno. Intentá de nuevo más tarde.",
+};
 
   async function handleClick() {
     setLoading(true);
-    setMessage(null);
     try {
       const res = await fetch("/api/ai", { method: "POST" });
 
-      if (res.status === 429) {
-        setMessage("Límite de solicitudes alcanzado");
-        setLoading(false);
-        return;
-      }
-
       if (!res.ok) {
-        const txt = await res.text();
-        setMessage(`Error: ${txt} (${res.status})`);
-        setLoading(false);
+        toast.info(STATUS_MESSAGES[res.status] ?? "Ocurrió un error inesperado.");
         return;
       }
 
@@ -37,8 +37,8 @@ export function SuggestButton() {
           },
         }),
       );
-    } catch (e) {
-      setMessage("Error inesperado");
+    } catch {
+      toast.info("No se pudo conectar. Verificá tu conexión.");
     } finally {
       setLoading(false);
     }
@@ -54,11 +54,6 @@ export function SuggestButton() {
         <span className="text-2xl">💡</span>
         {loading ? "Generando..." : "Sugerir Entrenamiento"}
       </button>
-      {message && (
-        <div className="mt-2 text-sm text-center text-foreground">
-          {message}
-        </div>
-      )}
     </div>
   );
 }

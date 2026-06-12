@@ -64,6 +64,30 @@ export async function POST() {
     );
   }
 
+  //Before continuing, check if user uploaded new excercises or updated goal/experience since last AI generation. If not, we can skip regeneration to save tokens.
+  const lastWorkout = await db.query.workouts.findFirst({
+    where: eq(workouts.userId, existingUser.id),
+    orderBy: [desc(workouts.fecha), desc(workouts.createdAt)], // Asegura el último real del día
+  });
+  // Para obtener el ID de forma segura:
+  const lastWorkoutId = lastWorkout?.id;
+  //consulto el ultimo estado de entrenamiento generado por la IA
+  const latestState = await db.query.trainingStates.findFirst({
+    where: eq(trainingStates.userId, existingUser.id),
+    orderBy: [desc(trainingStates.createdAt)],
+  });
+  const savedWorkoutIdInState = latestState?.lastWorkoutId;
+
+  // Validar y comparar
+  // Si no hay entrenamientos, o los IDs no coinciden, cortamos la ejecución devolviendo null
+  if (!lastWorkoutId || lastWorkoutId === savedWorkoutIdInState) {
+    console.log("No new workouts or changes detected. AI generation skipped.");
+    return new NextResponse(
+      "No new workouts or changes detected. AI generation skipped.",
+      { status: 409 },
+    );
+  }
+
   // Reduce payload size: fetch only last 10 workouts and trim exercise fields
   const recentWorkoutsRaw = await db.query.workouts.findMany({
     where: eq(workouts.userId, existingUser.id),
@@ -72,7 +96,7 @@ export async function POST() {
     with: { exercises: true },
   });
 
-  const recentWorkouts = recentWorkoutsRaw.map((w,i) => ({
+  const recentWorkouts = recentWorkoutsRaw.map((w, i) => ({
     id: `workout-${i}`, // avoid exposing real IDs
     fecha: w.fecha,
     exercises: w.exercises.map((e) => ({
@@ -85,35 +109,33 @@ export async function POST() {
   }));
 
   const workoutsPrompt = recentWorkouts
-  .flatMap(workout =>
-    workout.exercises.map(exercise => {
-      const notes: string[] = [];
+    .flatMap((workout) =>
+      workout.exercises.map((exercise) => {
+        const notes: string[] = [];
 
-      // Extraer notas de textos entre paréntesis
-      const match = exercise.nombre.match(/\((.*?)\)/g);
-      if (match) {
-        notes.push(
-          ...match.map(m => m.replace(/[()]/g, "").trim())
-        );
-      }
+        // Extraer notas de textos entre paréntesis
+        const match = exercise.nombre.match(/\((.*?)\)/g);
+        if (match) {
+          notes.push(...match.map((m) => m.replace(/[()]/g, "").trim()));
+        }
 
-      // Nombre limpio sin paréntesis
-      const exerciseName = exercise.nombre
-        .replace(/\(.*?\)/g, "")
-        .replace(/\s+/g, " ")
-        .trim();
+        // Nombre limpio sin paréntesis
+        const exerciseName = exercise.nombre
+          .replace(/\(.*?\)/g, "")
+          .replace(/\s+/g, " ")
+          .trim();
 
-      return [
-        workout.fecha,
-        exerciseName,
-        `${exercise.series ?? 0}x${exercise.repeticiones ?? 0}`,
-        `${exercise.peso ?? 0}kg`,
-        exercise.grupoMuscular,
-        notes.length ? notes.join(", ") : "-"
-      ].join(" | ");
-    })
-  )
-  .join("\n");
+        return [
+          workout.fecha,
+          exerciseName,
+          `${exercise.series ?? 0}x${exercise.repeticiones ?? 0}`,
+          `${exercise.peso ?? 0}kg`,
+          exercise.grupoMuscular,
+          notes.length ? notes.join(", ") : "-",
+        ].join(" | ");
+      }),
+    )
+    .join("\n");
 
   // Fetch latest training objective and previous training state
   const latestObjective = await db.query.trainingObjectives.findFirst({
@@ -121,15 +143,10 @@ export async function POST() {
     orderBy: [desc(trainingObjectives.updatedAt)],
   });
 
-  const latestState = await db.query.trainingStates.findFirst({
-    where: eq(trainingStates.userId, existingUser.id),
-    orderBy: [desc(trainingStates.createdAt)],
-  });
-
-const today = format(new Date(),'yyyy-MM-dd')
+  const today = format(new Date(), "yyyy-MM-dd");
 
   // Keep prompt concise to reduce token usage; instruct AI to be brief and output only required JSON block
-  const promptText = `You are a senior fitness coach generating the NEXT workout.
+  const systemPrompt = `You are a senior fitness coach generating the NEXT workout.
 
 Use ONLY the provided USER DATA. This is a production app → hallucinations are not allowed.
 
@@ -179,16 +196,6 @@ Requirements:
 - No extra text
 - if last workout is today, tell the user the exercises are for the next day of training.
 
-#USER DATA:
-- [Today date]: ${today}.
-- [Goal (written in spanish) - start]: ${latestObjective?.content ?? existingUser.objetivo ?? "General fitness"} [Goal - end]
-- [Experience - start]: ${existingUser.experiencia || "Unknown"} [Experience - end]
-- [Previous state - start]: ${latestState ? JSON.stringify(latestState) : null} [Previous state - end]
-- [Last workouts - (exercises are written in spanish mostly or english.) - start]
-Format:
-Date | Exercise | Sets x Reps | Weight | Muscle Group | Notes
-${workoutsPrompt}
-[Last workouts - end]
 ## TRAINING STATE (COACH MEMORY SUMMARY)
 
 training_state is a compressed strategic summary of the user's training evolution.
@@ -202,7 +209,6 @@ It must be updated after each generated workout considering:
 - Last workouts
 
 Fields:
-
 - priority_goals → What performance goals are currently prioritized.
 - secondary_goals → Secondary physique or health goals.
 - progression_focus → Exercises or abilities currently being progressed.
@@ -250,18 +256,46 @@ Fields:
 - All text must be in Spanish
 `;
 
+  const userPrompt = `
+#USER DATA:
+- [Today date]: ${today}.
+- [Goal (written in spanish) - start]: ${latestObjective?.content ?? existingUser.objetivo ?? "General fitness"} [Goal - end]
+- [Experience - start]: ${existingUser.experiencia || "Unknown"} [Experience - end]
+- [Previous state - start]: ${latestState ? JSON.stringify(latestState) : null} [Previous state - end]
+- [Last workouts - (exercises are written in spanish mostly or english.) - start]
+Format:
+Date | Exercise | Sets x Reps | Weight | Muscle Group | Notes
+${workoutsPrompt}
+[Last workouts - end]
+`;
+
   if (process.env.NODE_ENV === "development") {
-    console.log("Prompt:", promptText);
+    console.log("System prompt:", systemPrompt);
+    console.log("User prompt:", userPrompt);
   }
   try {
-    // TRY AI CALLs WITH FALLBACK --------------
     let text = "";
+    let result = streamText({
+      model: google("gemini-3.5-flash"),
+      system: systemPrompt,
+      prompt: userPrompt,
+      topP: 0.1,
+      topK: 20,
+    });
 
-    try {
-      const result = streamText({
-        model: google("gemini-3.5-flash"),
-        //model: google("gemini-3.1-pro-preview"),
-        prompt: promptText,
+    for await (const delta of result.textStream) {
+      text += delta;
+    }
+
+    if (text.length > 0 && text.includes("Error")) {
+      console.log(
+        "Gemini 3.5 returned an error, retrying with Gemini 3.1 Flash Lite...",
+        text,
+      );
+      result = streamText({
+        model: google("gemini-3.1-flash-lite"),
+        system: systemPrompt,
+        prompt: userPrompt,
         topP: 0.1,
         topK: 20,
       });
@@ -269,28 +303,15 @@ Fields:
       for await (const delta of result.textStream) {
         text += delta;
       }
-    } catch (googleError: unknown) {
-      console.log("Google failed → fallback to OpenRouter", googleError);
-      try {
-        const result = streamText({
-          model: openrouter("openrouter/free"),
-          prompt: promptText,
-        });
-
-        for await (const delta of result.textStream) {
-          text += delta;
-        }
-      } catch (openRouterError) {
-        console.error("OpenRouter failed", openRouterError);
-        return new NextResponse("AI Generation Error", { status: 500 });
-      }
     }
-//    -----------------------------------------------
 
     await db.insert(aiLogs).values({
       id: crypto.randomUUID(),
       userId: existingUser.id,
-      requestPayload: trimPayload(promptText, MAX_REQUEST_PAYLOAD),
+      requestPayload: trimPayload(
+        `{systemPrompt: ${systemPrompt}, prompt: ${userPrompt}}`,
+        MAX_REQUEST_PAYLOAD,
+      ),
       responsePayload: trimPayload(text, MAX_RESPONSE_PAYLOAD),
     });
 
@@ -318,6 +339,7 @@ Fields:
       await db.insert(trainingStates).values({
         id: crypto.randomUUID(),
         userId: existingUser.id,
+        lastWorkoutId: lastWorkoutId,
         ...mapTrainingStateToDB(trainingState),
       });
     } catch (e) {
@@ -336,7 +358,10 @@ Fields:
     await db.insert(aiLogs).values({
       id: crypto.randomUUID(),
       userId: existingUser.id,
-      requestPayload: trimPayload(promptText, MAX_REQUEST_PAYLOAD),
+      requestPayload: trimPayload(
+        `{systemPrompt: ${systemPrompt}, prompt: ${userPrompt}}`,
+        MAX_REQUEST_PAYLOAD,
+      ),
       responsePayload: trimPayload(
         `ERROR: ${error instanceof Error ? error.message : "Unknown API Error"}`,
         MAX_RESPONSE_PAYLOAD,

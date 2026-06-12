@@ -2,6 +2,7 @@ import { TrainingState } from "./ai-response";
 
 export function mapTrainingStateToDB(ts: TrainingState) {
   return {
+    //lastWorkoutId: ts.last_workout_id,
     priorityGoals: ts.priority_goals,
     secondaryGoals: ts.secondary_goals,
     progressionFocus: ts.progression_focus,
