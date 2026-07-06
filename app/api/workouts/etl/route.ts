@@ -54,11 +54,11 @@ export async function POST(req: Request) {
                         .string()
                         .min(1)
                         .describe("Name of the exercise"),
-                      series: z.number().int().default(1),
-                      repeticiones: z.number().int().default(0),
-                      duracionSegundos: z.number().int().default(0),
-                      peso: z.number().int().default(0),
-                      grupoMuscular: muscleGroupSchema,
+                      series: z.number().int().default(1).describe("Number of sets performed"),
+                      repeticiones: z.number().int().default(0).describe("Number of repetitions per set performed"),
+                      duracionSegundos: z.number().int().default(0).describe("Duration in seconds per set performed"),
+                      peso: z.number().int().default(0).describe("Weight used per set performed"),
+                      grupoMuscular: muscleGroupSchema.describe("Muscle group targeted by the exercise"),
                     }),
                   )
                   .min(1, "Each workout must have at least one exercise"), // Validation: Ensure exercises exist
@@ -67,7 +67,7 @@ export async function POST(req: Request) {
             .min(1, "No workouts were found in the text"), // Validation: Ensure at least one workout exists
         }),
       }),
-      prompt: `Reference Date (Hoy): ${referenceDate}\nExtract all workouts from the user's description. User description: "${prompt}"`,
+      prompt: `Reference Date: ${referenceDate}\nYou are a Gym Workout Extractor from user gym exercise descriptions. Extract all workouts from the user's description. User description: "${prompt}"`,
     });
     const value = result.output
     // Insert into database

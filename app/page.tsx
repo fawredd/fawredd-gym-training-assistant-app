@@ -28,7 +28,7 @@ export default async function Home() {
       </div>
 
       <div className="absolute bottom-8 text-center text-sm text-muted-foreground">
-        <p className="px-2">Registra tus rutinas, controla tu volumen térmico y mejora tus marcas.</p>
+        <p className="px-2">Registra tus rutinas, y obten asistencia personalizada mediante AI.</p>
       </div>
     </div>
   );

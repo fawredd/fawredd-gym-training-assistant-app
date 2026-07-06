@@ -42,6 +42,7 @@ export async function POST() {
   if (!existingUser)
     return new NextResponse("User profile not found", { status: 404 });
 
+  if (existingUser.tipoDeUsuario > 1) { // if user is admin, we skip rate limiting
   // Rate Limiting logic using Vercel KV
   try {
     const rateLimitKey = `rl_ai_${existingUser.id}`;
@@ -62,6 +63,7 @@ export async function POST() {
       "KV Rate Limiter failed, skipping strict limit for dev/local.",
       e,
     );
+  }
   }
 
   //Before continuing, check if user uploaded new excercises or updated goal/experience since last AI generation. If not, we can skip regeneration to save tokens.
@@ -275,8 +277,9 @@ ${workoutsPrompt}
   }
   try {
     let text = "";
-    let result = streamText({
-      model: google("gemini-3.5-flash"),
+    const result = streamText({
+      //model: google("gemini-3.5-flash"),
+      model: google("gemini-3.1-flash-lite"),
       system: systemPrompt,
       prompt: userPrompt,
       topP: 0.1,
@@ -291,25 +294,6 @@ ${workoutsPrompt}
     } catch (err) {
       console.error("Error leyendo stream", err);
     }
-
-    if (text.length > 0 && text.includes("Error")) {
-      console.log(
-        "Gemini 3.5 returned an error, retrying with Gemini 3.1 Flash Lite...",
-        text,
-      );
-      result = streamText({
-        model: google("gemini-3.1-flash-lite"),
-        system: systemPrompt,
-        prompt: userPrompt,
-        topP: 0.1,
-        topK: 20,
-      });
-
-      for await (const delta of result.textStream) {
-        text += delta;
-      }
-    }
-
     await db.insert(aiLogs).values({
       id: crypto.randomUUID(),
       userId: existingUser.id,

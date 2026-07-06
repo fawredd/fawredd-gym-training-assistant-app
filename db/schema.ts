@@ -30,6 +30,7 @@ export const users = fawreddGymSchema.table("users", {
   altura: integer("altura"),
   objetivo: objectiveEnum("objetivo"),
   experiencia: experienceEnum("experiencia"),
+  tipoDeUsuario: integer("tipo_de_usuario").notNull().default(2), //1 admin, 2 user, 3 coach
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
