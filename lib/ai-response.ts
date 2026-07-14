@@ -8,7 +8,9 @@ export interface TrainingState {
   recommendation_next: string;
   user_traning_evolution_analysis: string;
 }
-export interface AIResponse {
+
+
+export interface AIRoutineResponse {
   resumen: string;
   rutina: {
     grupo: string;
@@ -24,7 +26,7 @@ export interface AIResponse {
   training_state: TrainingState;
 }
 
-function isAIResponse(obj: unknown): obj is AIResponse {
+function isAIRoutineResponse(obj: unknown): obj is AIRoutineResponse {
   if (typeof obj !== "object" || obj === null) return false;
   const o = obj as Record<string, unknown>;
 
@@ -70,7 +72,7 @@ function sanitizeJSON(raw: string): string {
   return text;
 }
 
-export function parseAIResponse(text: string): AIResponse | null {
+export function parseAIResponse(text: string): AIRoutineResponse | null {
   const sanitized = sanitizeJSON(text);
   let parsed: unknown = null;
 
@@ -88,10 +90,10 @@ export function parseAIResponse(text: string): AIResponse | null {
     }
   }
 
-  return isAIResponse(parsed) ? parsed : null;
+  return isAIRoutineResponse(parsed) ? parsed : null;
 }
 
-export function formatAIResponseForUI(data: AIResponse): string {
+export function formatAIResponseForUI(data: AIRoutineResponse): string {
   const ejercicios = data.rutina.ejercicios
     .map((ex) => {
       let detalle = "";

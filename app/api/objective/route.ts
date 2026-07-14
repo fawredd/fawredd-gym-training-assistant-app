@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { db } from "../../../db";
 import { trainingObjectives, users } from "../../../db/schema";
 import { eq, desc } from "drizzle-orm";
+import { generateNewTrainingState } from "@/lib/training-state-utils";
 
 export async function GET() {
   const { userId } = await auth();
@@ -55,8 +56,15 @@ export async function PUT(req: NextRequest) {
         updatedAt: new Date(),
       });
     }
+    const newTrainingState = generateNewTrainingState(existingUser);
+    if (!newTrainingState) {
+      return new NextResponse("Failed to generate new training state", {
+        status: 500,
+      });
+    }
 
     return new NextResponse(null, { status: 204 });
+    
   } catch (error) {
     console.error("Error saving objective", error);
     return new NextResponse("Internal Server Error", { status: 500 });

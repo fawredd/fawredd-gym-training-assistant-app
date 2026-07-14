@@ -116,8 +116,6 @@ export const trainingStates = fawreddGymSchema.table("training_states", {
   userId: text("user_id")
     .notNull()
     .references(() => users.id),
-
-  lastWorkoutId: text("last_workout_id").references(() => workouts.id),
   priorityGoals: text("priority_goals").notNull(),
   secondaryGoals: text("secondary_goals").notNull(),
   progressionFocus: text("progression_focus").notNull(),

@@ -25,7 +25,7 @@ import {
 import { Check, X } from "lucide-react";
 import { redirect } from "next/navigation";
 import { buildChartData } from "@/lib/muscleGraphData";
-import { AIResponse, formatAIResponseForUI } from "@/lib/ai-response";
+import { AIRoutineResponse , formatAIResponseForUI } from "@/lib/ai-response";
 import { format, parseISO, subDays, startOfDay } from "date-fns";
 import { AITrainingState } from "@/components/dashboard/ai-training-state";
 import { PushNotificationManager} from "@/components/pwa/pwa-components";
@@ -41,7 +41,7 @@ export default async function DashboardPage() {
   if (!userId) redirect("/");
 
   const clerkUser = await currentUser();
-  let userName = "Usuario";
+  let userName = clerkUser?.username || "Usuario";
 
   if (clerkUser) {
     const defaultName = clerkUser.firstName
@@ -228,7 +228,7 @@ export default async function DashboardPage() {
           <MainCta />
 
           <AIInsight
-            contenido={latestMemory ? formatAIResponseForUI(JSON.parse(latestMemory.contenido) as AIResponse) : null}
+            contenido={latestMemory ? formatAIResponseForUI(JSON.parse(latestMemory.contenido) as AIRoutineResponse) : null}
             fecha={latestMemoryFecha}
           />
           <AITrainingState />

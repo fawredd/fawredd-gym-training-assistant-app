@@ -5,7 +5,7 @@ import {
   workouts,
   workoutExercises,
   users,
-  aiLogs,
+  //aiLogs,
 } from "../../../../db/schema";
 import { eq } from "drizzle-orm";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
@@ -101,12 +101,12 @@ export async function POST(req: Request) {
     }
 
     // Log AI Interaction
-    await db.insert(aiLogs).values({
+    /* await db.insert(aiLogs).values({
       id: crypto.randomUUID(),
       userId: existingUser.id,
       requestPayload: prompt,
       responsePayload: JSON.stringify(value),
-    });
+    }); */
 
     return NextResponse.json({ success: true, data: insertedData });
   } catch (error) {

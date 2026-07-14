@@ -2,11 +2,8 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "../../../db";
 import {
-  workouts,
   users,
   aiMemories,
-  aiLogs,
-  trainingObjectives,
   trainingStates,
 } from "../../../db/schema";
 import { eq, desc } from "drizzle-orm";
@@ -15,27 +12,21 @@ import { google } from "@ai-sdk/google";
 import { streamText } from "ai";
 import { kv } from "@vercel/kv";
 import { parseAIResponse, TrainingState } from "@/lib/ai-response";
-import { mapTrainingStateToDB } from "@/lib/training-state-utils";
+import { mapTrainingStateToDB, getLatestTrainingStateAsMDTable, generateNewTrainingState } from "@/lib/training-state-utils";
 import { format } from "date-fns";
+import { fetchRecentWorkoutsAsMDTable } from "@/lib/workouts-utils";
+import { fetchLatestTrainingObjective } from "@/lib/user-objective-utils";
 
 const openrouter = createOpenRouter({
   apiKey: process.env.OPENROUTER_API_KEY,
 });
 
-// Trim helpers to limit stored token sizes
-const MAX_REQUEST_PAYLOAD = 2000;
-const MAX_RESPONSE_PAYLOAD = 4000;
-//const MAX_MEMORY_CONTENT = 2000;
-
-function trimPayload(s: string | null | undefined, max: number) {
-  if (!s) return s ?? null;
-  return s.length > max ? s.slice(0, max) : s;
-}
-
 export async function POST() {
+  
+  // verify user authentication
   const { userId } = await auth();
   if (!userId) return new NextResponse("Unauthorized", { status: 401 });
-
+  //verify user exists in our DB
   const existingUser = await db.query.users.findFirst({
     where: eq(users.externalAuthId, userId),
   });
@@ -66,84 +57,15 @@ export async function POST() {
   }
   }
 
-  //Before continuing, check if user uploaded new excercises or updated goal/experience since last AI generation. If not, we can skip regeneration to save tokens.
-  const lastWorkout = await db.query.workouts.findFirst({
-    where: eq(workouts.userId, existingUser.id),
-    orderBy: [desc(workouts.fecha), desc(workouts.createdAt)], // Asegura el último real del día
-  });
-  // Para obtener el ID de forma segura:
-  const lastWorkoutId = lastWorkout?.id;
+
   //consulto el ultimo estado de entrenamiento generado por la IA
-  const latestState = await db.query.trainingStates.findFirst({
-    where: eq(trainingStates.userId, existingUser.id),
-    orderBy: [desc(trainingStates.createdAt)],
-  });
-  const savedWorkoutIdInState = latestState?.lastWorkoutId;
+  const latestState = await getLatestTrainingStateAsMDTable(existingUser);
 
-  // Validar y comparar
-  // Si no hay entrenamientos, o los IDs no coinciden, cortamos la ejecución devolviendo null
-  if (!lastWorkoutId || lastWorkoutId === savedWorkoutIdInState) {
-    console.log("No new workouts or changes detected. AI generation skipped.");
-    return new NextResponse(
-      "No new workouts or changes detected. AI generation skipped.",
-      { status: 409 },
-    );
-  }
+  //consulto los ultimos entrenamientos del usuario en formato tabla markdown para pasarselo al modelo
+  const workoutsPrompt = await fetchRecentWorkoutsAsMDTable(existingUser);
 
-  // Reduce payload size: fetch only last 10 workouts and trim exercise fields
-  const recentWorkoutsRaw = await db.query.workouts.findMany({
-    where: eq(workouts.userId, existingUser.id),
-    orderBy: [desc(workouts.fecha)],
-    limit: 10,
-    with: { exercises: true },
-  });
-
-  const recentWorkouts = recentWorkoutsRaw.map((w, i) => ({
-    id: `workout-${i}`, // avoid exposing real IDs
-    fecha: w.fecha,
-    exercises: w.exercises.map((e) => ({
-      nombre: e.nombre,
-      series: e.series,
-      repeticiones: e.repeticiones,
-      peso: e.peso,
-      grupoMuscular: e.grupoMuscular,
-    })),
-  }));
-
-  const workoutsPrompt = recentWorkouts
-    .flatMap((workout) =>
-      workout.exercises.map((exercise) => {
-        const notes: string[] = [];
-
-        // Extraer notas de textos entre paréntesis
-        const match = exercise.nombre.match(/\((.*?)\)/g);
-        if (match) {
-          notes.push(...match.map((m) => m.replace(/[()]/g, "").trim()));
-        }
-
-        // Nombre limpio sin paréntesis
-        const exerciseName = exercise.nombre
-          .replace(/\(.*?\)/g, "")
-          .replace(/\s+/g, " ")
-          .trim();
-
-        return [
-          workout.fecha,
-          exerciseName,
-          `${exercise.series ?? 0}x${exercise.repeticiones ?? 0}`,
-          `${exercise.peso ?? 0}kg`,
-          exercise.grupoMuscular,
-          notes.length ? notes.join(", ") : "-",
-        ].join(" | ");
-      }),
-    )
-    .join("\n");
-
-  // Fetch latest training objective and previous training state
-  const latestObjective = await db.query.trainingObjectives.findFirst({
-    where: eq(trainingObjectives.userId, existingUser.id),
-    orderBy: [desc(trainingObjectives.updatedAt)],
-  });
+  //consulto el ultimo objetivo de entrenamiento del usuario
+  const latestObjective = await fetchLatestTrainingObjective(existingUser);
 
   const today = format(new Date(), "yyyy-MM-dd");
 
@@ -198,28 +120,6 @@ Requirements:
 - No extra text
 - if last workout is today, tell the user the exercises are for the next day of training.
 
-## TRAINING STATE (COACH MEMORY SUMMARY)
-
-training_state is a compressed strategic summary of the user's training evolution.
-It does NOT describe the last workout. It describes the coaching strategy.
-
-It exists to avoid re-analysing the full history every prompt.
-
-It must be updated after each generated workout considering:
-- Goal
-- Previous state
-- Last workouts
-
-Fields:
-- priority_goals → What performance goals are currently prioritized.
-- secondary_goals → Secondary physique or health goals.
-- progression_focus → Exercises or abilities currently being progressed.
-- weak_areas → Muscle groups or capacities lagging behind.
-- recovery_notes → Fatigue, recovery or scheduling insights.
-- weekly_strategy → How the week is being balanced.
-- recommendation_next → Strategic suggestion for the next workout.
-- user_traning_evolution_analysis → Short longitudinal coaching insight.
-
 ##OUTPUT (STRICT JSON ONLY, NO TEXT OUTSIDE JSON):
 {
   "resumen": "string", // brief summary of the plan and rationale
@@ -236,18 +136,6 @@ Fields:
       }
     ]
   },
-  "training_state": {
-    "priority_goals": "string",
-    "secondary_goals": "string",
-    "progression_focus": "string",
-    "weak_areas": "string",
-    "recovery_notes": "string",
-    "weekly_strategy": "string",
-    "fatigue_level": "bajo | medio | alto",
-    "recommendation_next": "string",
-    "user_traning_evolution_analysis": "string",
-  },
-  
 }
 
 #IMPORTANT:
@@ -262,8 +150,7 @@ Fields:
 #USER DATA:
 - [Today date]: ${today}.
 - [Goal (written in spanish) - start]: ${latestObjective?.content ?? existingUser.objetivo ?? "General fitness"} [Goal - end]
-- [Experience - start]: ${existingUser.experiencia || "Unknown"} [Experience - end]
-- [Previous state - start]: ${latestState ? JSON.stringify(latestState) : null} [Previous state - end]
+- [Previous state - start]: ${latestState} [Previous state - end]
 - [Last workouts - (exercises are written in spanish mostly or english.) - start]
 Format:
 Date | Exercise | Sets x Reps | Weight | Muscle Group | Notes
@@ -294,21 +181,12 @@ ${workoutsPrompt}
     } catch (err) {
       console.error("Error leyendo stream", err);
     }
-    await db.insert(aiLogs).values({
-      id: crypto.randomUUID(),
-      userId: existingUser.id,
-      requestPayload: trimPayload(
-        `{systemPrompt: ${systemPrompt}, prompt: ${userPrompt}}`,
-        MAX_REQUEST_PAYLOAD,
-      ),
-      responsePayload: trimPayload(text, MAX_RESPONSE_PAYLOAD),
-    });
 
     // Try to extract a JSON training_state from the AI output
     const parsed = parseAIResponse(text);
 
     // Persist AI memory
-    if (parsed)
+    if (parsed){
       try {
         await db.insert(aiMemories).values({
           id: crypto.randomUUID(),
@@ -318,44 +196,23 @@ ${workoutsPrompt}
       } catch (e) {
         console.warn("Failed to persist AI memory", e);
       }
-
-    const trainingState: TrainingState | null = parsed?.training_state ?? null;
-
-    if (!trainingState)
-      return new NextResponse("AI response format is invalid", { status: 422 });
-
-    try {
-      await db.insert(trainingStates).values({
-        id: crypto.randomUUID(),
-        userId: existingUser.id,
-        lastWorkoutId: lastWorkoutId,
-        ...mapTrainingStateToDB(trainingState),
-      });
-    } catch (e) {
-      console.warn("Failed to persist training state", e);
-    }
-    if (parsed) {
       if (process.env.NODE_ENV === "development")
         console.log("Parsed AI response:", JSON.stringify(parsed));
+
+      const newTrainingState = generateNewTrainingState(existingUser);
+      if (!newTrainingState) {
+        return new NextResponse("Failed to generate new training state", {
+          status: 500,
+        });
+      }
+
       return NextResponse.json(parsed);
     }
+    
     return new NextResponse("AI response could not be parsed", { status: 422 });
+
   } catch (error) {
     console.error("AI Generation failed", error);
-
-    // Log the failure
-    await db.insert(aiLogs).values({
-      id: crypto.randomUUID(),
-      userId: existingUser.id,
-      requestPayload: trimPayload(
-        `{systemPrompt: ${systemPrompt}, prompt: ${userPrompt}}`,
-        MAX_REQUEST_PAYLOAD,
-      ),
-      responsePayload: trimPayload(
-        `ERROR: ${error instanceof Error ? error.message : "Unknown API Error"}`,
-        MAX_RESPONSE_PAYLOAD,
-      ),
-    });
 
     return new NextResponse("AI Generation Error", { status: 500 });
   }
