@@ -1,6 +1,6 @@
 "use client";
 
-import { AIResponse, formatAIResponseForUI } from "@/lib/ai-response";
+import { AIRoutineResponse, formatAIResponseForUI } from "@/lib/ai-response";
 import React, { useState } from "react";
 import { toast } from "sonner"
 
@@ -26,7 +26,7 @@ const STATUS_MESSAGES: Record<number, string> = {
         return;
       }
 
-      const parsed = (await res.json()) as AIResponse;
+      const parsed = (await res.json()) as AIRoutineResponse;
       const contenido = formatAIResponseForUI(parsed);
 
       window.dispatchEvent(

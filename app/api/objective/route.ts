@@ -4,6 +4,7 @@ import { db } from "../../../db";
 import { trainingObjectives, users } from "../../../db/schema";
 import { eq, desc } from "drizzle-orm";
 import { generateNewTrainingState } from "@/lib/training-state-utils";
+import { revalidatePath } from 'next/cache';
 
 export async function GET() {
   const { userId } = await auth();
@@ -18,7 +19,7 @@ export async function GET() {
     where: eq(trainingObjectives.userId, existingUser.id),
     orderBy: [desc(trainingObjectives.updatedAt)],
   });
-
+  revalidatePath('/dashboard/');
   return NextResponse.json({ objective: objective ? objective.content : null });
 }
 

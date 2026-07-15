@@ -1,6 +1,6 @@
 import { TrainingState as TrainingStateDbMap } from "./ai-response";
 import { db } from "@/db";
-import { User, NewTrainingState, trainingStates } from "@/db/schema";
+import { User, NewTrainingState, trainingStates, trainingObjectives, workouts } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { format } from "date-fns";
 import { fetchLatestTrainingObjective } from "./user-objective-utils";
@@ -39,12 +39,12 @@ export async function getLatestTrainingStateAsMDTable(
   }
   //Verify if training state is updated related to the latest objective and workouts dates
   const latestObjective = await db.query.trainingObjectives.findFirst({
-    where: eq(trainingStates.userId, existingUser.id),
-    orderBy: [desc(trainingStates.createdAt)],
+    where: eq(trainingObjectives.userId, existingUser.id),
+    orderBy: [desc(trainingObjectives.updatedAt)],
   });
   const latestWorkout = await db.query.workouts.findFirst({
-    where: eq(trainingStates.userId, existingUser.id),
-    orderBy: [desc(trainingStates.createdAt)],
+    where: eq(workouts.userId, existingUser.id),
+    orderBy: [desc(workouts.createdAt)],
   });
   if (
     latestObjective && 
@@ -62,12 +62,7 @@ export async function getLatestTrainingStateAsMDTable(
   // 3. Construimos el string en formato Markdown optimizado para el prompt de la IA
   const markdownPrompt = `
 # 🏋️‍♂️ ÚLTIMO ESTADO DE ENTRENAMIENTO REGISTRADO
-
-| Propiedad | Detalle |
-| :--- | :--- |
-| **ID del Estado** | \`${latestState.id}\` |
-| **Fecha de Registro** | ${latestState.createdAt.toISOString()} |
-| **ID de Usuario** | \`${latestState.userId}\` |
+| **Fecha de Registro** | ${format(latestState.createdAt,"yyyy-MM-dd")} |
 
 ## 🎯 Objetivos y Enfoque
 * **Metas Prioritarias:** ${latestState.priorityGoals}
@@ -214,7 +209,7 @@ export async function generateNewTrainingState(
   `;
   try {
     const result = await generateText({
-      model: google("gemini-3.5-flash"),
+      model: google("gemini-3.1-flash-lite"),
       //model: openrouter("openrouter/free"),
       output: Output.object({
         schema: z.object({
@@ -262,6 +257,9 @@ export async function generateNewTrainingState(
       }),
       system: systemPrompt,
       prompt: userPrompt,
+      topP: 0.1,
+      topK: 20,
+      maxRetries: 0,
     });
 
     const newTrainingState = result.output;

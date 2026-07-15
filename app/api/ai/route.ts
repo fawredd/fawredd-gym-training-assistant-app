@@ -187,33 +187,47 @@ ${workoutsPrompt}
 
     // Persist AI memory
     if (parsed){
+      console.log("--- Parsed AI response OK ---");
+      if (process.env.NODE_ENV === "development")
+        console.log("Parsed AI response:", JSON.stringify(parsed));
+        console.log("-----------------------------")
       try {
+        console.log("--- Persisting AI memory for user ---");
         await db.insert(aiMemories).values({
           id: crypto.randomUUID(),
           userId: existingUser.id,
           contenido: JSON.stringify(parsed),
         });
+        console.log("- AI memory persisted successfully -");
       } catch (e) {
-        console.warn("Failed to persist AI memory", e);
+        console.warn("- Failed to persist AI memory -", e);
       }
-      if (process.env.NODE_ENV === "development")
-        console.log("Parsed AI response:", JSON.stringify(parsed));
-
-      const newTrainingState = generateNewTrainingState(existingUser);
-      if (!newTrainingState) {
+      
+      try{
+        console.log("--- Generating new training state ---");
+        const newTrainingState = await generateNewTrainingState(existingUser);
+        if (!newTrainingState) {
+          console.error("- No training state generated -");
+          return new NextResponse("Failed to generate new training state", {
+            status: 500,
+          });
+        }
+        console.log("- New training state generated successfully -");
+      }catch(e){
+        console.error("- Failed to generate new training state -", e);
         return new NextResponse("Failed to generate new training state", {
           status: 500,
         });
       }
-
+      console.log("- Returning AI routine response -");
       return NextResponse.json(parsed);
     }
     
-    return new NextResponse("AI response could not be parsed", { status: 422 });
+    console.log("--- Failed to parse AI response:", text);
+    return new NextResponse(`AI response could not be parsed.`, { status: 422 });
 
   } catch (error) {
-    console.error("AI Generation failed", error);
-
+    console.error("--- AI Generation failed", error);
     return new NextResponse("AI Generation Error", { status: 500 });
   }
 }

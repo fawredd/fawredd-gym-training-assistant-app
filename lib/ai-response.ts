@@ -26,30 +26,44 @@ export interface AIRoutineResponse {
   training_state: TrainingState;
 }
 
-function isAIRoutineResponse(obj: unknown): obj is AIRoutineResponse {
+export function isAIRoutineResponse(obj: unknown): obj is AIRoutineResponse {
   if (typeof obj !== "object" || obj === null) return false;
   const o = obj as Record<string, unknown>;
 
+  // 1. Validar la raíz ("resumen" y "rutina")
   if (
     typeof o.resumen !== "string" ||
     typeof o.rutina !== "object" ||
-    o.rutina === null ||
-    typeof o.training_state !== "object" ||
-    o.training_state === null
-  )
+    o.rutina === null
+  ) {
     return false;
+  }
 
-  const ts = o.training_state as Record<string, unknown>;
-  return (
-    typeof ts.priority_goals === "string" &&
-    typeof ts.secondary_goals === "string" &&
-    typeof ts.progression_focus === "string" &&
-    typeof ts.weak_areas === "string" &&
-    typeof ts.recovery_notes === "string" &&
-    typeof ts.weekly_strategy === "string" &&
-    typeof ts.recommendation_next === "string" &&
-    typeof ts.user_traning_evolution_analysis === "string"
-  );
+  const rutina = o.rutina as Record<string, unknown>;
+
+  // 2. Validar los campos de "rutina" ("grupo", "justificacion" y "ejercicios")
+  if (
+    typeof rutina.grupo !== "string" ||
+    typeof rutina.justificacion !== "string" ||
+    !Array.isArray(rutina.ejercicios)
+  ) {
+    return false;
+  }
+
+  // 3. Validar que cada ejercicio tenga la estructura correcta (opcional pero muy recomendado)
+  const ejerciciosValidos = rutina.ejercicios.every((ej: unknown) => {
+    if (typeof ej !== "object" || ej === null) return false;
+    const e = ej as Record<string, unknown>;
+    return (
+      typeof e.nombre === "string" &&
+      typeof e.series === "number" &&
+      typeof e.reps === "number" &&
+      typeof e.duracion === "number" &&
+      typeof e.peso === "number"
+    );
+  });
+
+  return ejerciciosValidos;
 }
 
 function sanitizeJSON(raw: string): string {
@@ -74,22 +88,28 @@ function sanitizeJSON(raw: string): string {
 
 export function parseAIResponse(text: string): AIRoutineResponse | null {
   const sanitized = sanitizeJSON(text);
+  console.log("---- AI response parsing start ----");
+  console.log("Sanitized AI response:", sanitized);
   let parsed: unknown = null;
 
   try {
     parsed = JSON.parse(sanitized);
+    console.log("Parsed AI response:", parsed);
   } catch {
     // Fallback: extraer el primer objeto JSON del texto
     const match = sanitized.match(/\{[\s\S]*\}/);
     if (match) {
       try {
         parsed = JSON.parse(match[0]);
+        console.log("Fallback Parsed AI response:", parsed);
       } catch {
+        console.error("Failed to parse fallback AI response");
+        console.log("---- AI response parsing end ----");
         return null;
       }
     }
   }
-
+  console.log("---- AI response parsing end ----");
   return isAIRoutineResponse(parsed) ? parsed : null;
 }
 

@@ -4,6 +4,7 @@ import { db } from "../../../../db";
 import { workouts, workoutExercises, users } from "../../../../db/schema";
 import { eq, and } from "drizzle-orm";
 import { MuscleGroup, classifyExercise } from "@/lib/muscleClassifier";
+import {generateNewTrainingState} from "@/lib/training-state-utils"
 
 interface Exercise {
   nombre: string;
@@ -46,6 +47,10 @@ export async function DELETE(
 
   try {
     await db.delete(workouts).where(eq(workouts.id, id));
+    const newTrainingState = await generateNewTrainingState(existingUser);
+    if (!newTrainingState) {
+      console.error("Failed to generate new training state after workout deletion");
+    }
     return new NextResponse(null, { status: 204 });
   } catch (error) {
     console.error("Error deleting workout", error);
@@ -108,6 +113,10 @@ export async function PUT(
         }
       }
     });
+    const newTrainingState = await generateNewTrainingState(existingUser);
+    if (!newTrainingState) {
+      console.error("Failed to generate new training state after workout update");
+    }
     return new NextResponse(null, { status: 204 });
   } catch (error) {
     console.error("Error updating workout", error);
