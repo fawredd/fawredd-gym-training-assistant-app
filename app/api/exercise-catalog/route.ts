@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/db";
 import { exerciseCatalog } from "@/db/schema";
-import { asc } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 
 export async function GET() {
   const { userId } = await auth();
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
   }
 
   const existing = await db.query.exerciseCatalog.findFirst({
-    where: exerciseCatalog.nombreNormalizado.eq(nombreNormalizado),
+    where: eq(exerciseCatalog.nombreNormalizado,nombreNormalizado),
   });
   if (existing) {
     return new NextResponse("Exercise with that name already exists", {

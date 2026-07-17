@@ -6,6 +6,12 @@ import { SignOutButton } from "@clerk/nextjs";
 import { useState } from "react";
 import { InstallPrompt } from "../pwa/pwa-components";
 
+const menuOptions = [
+  { label: "Dashboard", href: "/dashboard", icon: "🏠" },
+  { label: "Entrenamientos", href: "/entrenamientos", icon: "🏋️" },
+  { label: "Catalogo", href: "/exercise-catalog", icon: "📚" },
+];
+
 export function Header({ userName }: { userName: string }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -50,23 +56,19 @@ export function Header({ userName }: { userName: string }) {
             </div>
             <p className="text-sm text-muted-foreground">Hola, {userName}</p>
             <nav className="flex flex-col gap-2 mt-2">
-              <Link
-                href="/dashboard"
-                onClick={() => setMenuOpen(false)}
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium hover:bg-muted transition-colors"
-              >
-                📊 Dashboard
-              </Link>
-              <Link
-                href="/entrenamientos"
-                onClick={() => setMenuOpen(false)}
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium hover:bg-muted transition-colors"
-              >
-                🏋️ Entrenamientos
-              </Link>
-              
+              {menuOptions.map((option) => (
+                <Link
+                  key={option.href}
+                  href={option.href}
+                  onClick={() => setMenuOpen(false)}
+                  className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium hover:bg-muted transition-colors"
+                >
+                  {option.icon} {option.label}
+                </Link>
+              ))}
+              <hr className="my-2 border-border" />
               <InstallPrompt />
-              
+              <hr className="my-2 border-border" />
               <SignOutButton>
                 <button
                   onClick={() => setMenuOpen(false)}

@@ -9,9 +9,17 @@ export default async function ExerciseCatalogPage() {
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
 
-  const items = await db.query.exerciseCatalog.findMany({
+  const fetchedExercises = await db.query.exerciseCatalog.findMany({
     orderBy: [asc(exerciseCatalog.nombreNormalizado)],
   });
+
+  const items = fetchedExercises.map((exercise) => ({
+    id: exercise.id,
+    nombreNormalizado: exercise.nombreNormalizado,
+    grupoMuscular: exercise.grupoMuscular,
+    actividad: exercise.actividad,
+    createdAt: exercise.createdAt.toISOString(),
+  }));
 
   return (
     <div className="max-w-6xl w-full p-4 md:p-8 mx-auto">
