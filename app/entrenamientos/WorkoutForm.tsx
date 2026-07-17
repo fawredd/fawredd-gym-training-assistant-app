@@ -21,7 +21,7 @@ export default function WorkoutForm() {
         setEjercicios([...ejercicios, { nombre: '', series: 3, repeticiones: 0, peso: 0, duracionSegundos: 0, notas: "" }]);
     };
 
-    const handleExerciseChange = (index: number, field: string, value: string | number) => {
+    const handleExerciseChange = (index: number, field: string, value: string | number | null) => {
         const newExercises = [...ejercicios];
         newExercises[index] = { ...newExercises[index], [field]: value };
         setEjercicios(newExercises);
@@ -38,10 +38,11 @@ export default function WorkoutForm() {
 
         setIsSubmitting(true);
         try {
+            console.log("Submitting workout:", JSON.stringify({ date:fecha, exercises:ejercicios }));
             const res = await fetch('/api/workouts', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ fecha, ejercicios }),
+                body: JSON.stringify({ date:fecha, exercises:ejercicios }),
             });
 
             if (res.ok) {
@@ -87,8 +88,8 @@ export default function WorkoutForm() {
                         <CardContent className="pt-6 grid gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor={`nombre-${i}`}>Nombre (ej. Press Banca)</Label>
-                                <ExercisesCombobox id={`nombre-${i}`} value={ex.nombre} onValueChange={(value) => handleExerciseChange(i, 'nombre', value)} />
-                                <Input id={`nombre-${i}`} type="text" required value={ex.nombre} onChange={(e) => handleExerciseChange(i, 'nombre', e.target.value)} />
+                                <ExercisesCombobox id={`nombre-${i}`} required value={ex.nombre} onValueChange={(value) => handleExerciseChange(i, 'nombre', value)} />
+                                {/* <Input id={`nombre-${i}`} type="text" required value={ex.nombre} onChange={(e) => handleExerciseChange(i, 'nombre', e.target.value)} /> */}
                             </div>
                             <div className="grid grid-cols-3 gap-3">
                                 <div className="space-y-2">

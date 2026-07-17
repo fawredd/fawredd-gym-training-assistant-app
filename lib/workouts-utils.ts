@@ -24,6 +24,7 @@ export async function fetchRecentWorkoutsAsMDTable(existingUser: User): Promise<
       repeticiones: e.repeticiones,
       peso: e.peso,
       duracion: e.duracionSegundos,
+      notas: e.notas,
     })),
   }));
 
@@ -50,7 +51,7 @@ export async function fetchRecentWorkoutsAsMDTable(existingUser: User): Promise<
           `${exercise.series ?? 0}x${exercise.repeticiones ?? 0}`,
           `${exercise.peso ?? 0}kg`,
           exercise.grupoMuscular,
-          notes.length ? notes.join(", ") : "-",
+          notes.length ? notes.join(", ") : exercise.notas ?? "-",
         ].join(" | ");
       }),
     )

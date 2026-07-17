@@ -14,10 +14,11 @@ import { useState, useEffect } from "react";
 
 interface ExercisesComboboxProps {
   id: string;
+  required?: boolean;
   value: string | null;
   onValueChange: (value: string | null) => void;
 }
-export function ExercisesCombobox({ id, value, onValueChange }: ExercisesComboboxProps) {
+export function ExercisesCombobox({ id, required, value, onValueChange }: ExercisesComboboxProps) {
   const [exercises, setExercises] = useState<ExerciseCatalogRow[]>([]);
   
   useEffect(() => {
@@ -42,14 +43,16 @@ export function ExercisesCombobox({ id, value, onValueChange }: ExercisesCombobo
       onValueChange={onValueChange}
       autoHighlight
       name="exerciseCombobox"
+      required={required}
+      limit={10}
     >
       <ComboboxInput placeholder="Select an exercise" />
       <ComboboxContent>
         <ComboboxEmpty>No items found.</ComboboxEmpty>
-        <ComboboxList>
-          {(item: ExerciseCatalogRow) => (
-            <ComboboxItem key={item.id} value={item.id}>
-              {`${item.nombreNormalizado} | (${item.grupoMuscular} | ${item.actividad})`}
+        <ComboboxList className={`text-stone-300`}>
+          {(exercise: ExerciseCatalogRow) => (
+            <ComboboxItem key={exercise.id} value={exercise.nombreNormalizado}>
+              {`${exercise.nombreNormalizado} | (${exercise.grupoMuscular} | ${exercise.actividad})`}
             </ComboboxItem>
           )}
         </ComboboxList>

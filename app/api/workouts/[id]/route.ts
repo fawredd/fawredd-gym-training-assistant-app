@@ -10,6 +10,7 @@ import {
 import { eq, and } from "drizzle-orm";
 import { classifyExercise } from "@/lib/muscleClassifier";
 import { generateNewTrainingState } from "@/lib/training-state-utils";
+import { ApiResponse } from "@/types/api";
 
 interface Exercise {
   nombre: string;
@@ -22,8 +23,8 @@ interface Exercise {
 }
 
 type CreateWorkoutBody = {
-  fecha: string; // "YYYY-MM-DD"
-  ejercicios: Exercise[];
+  date: string; // "YYYY-MM-DD"
+  exercises: Exercise[];
 };
 
 export async function DELETE(
@@ -53,12 +54,12 @@ export async function DELETE(
 
   try {
     await db.delete(workouts).where(eq(workouts.id, id));
-    const newTrainingState = await generateNewTrainingState(existingUser);
+    /* const newTrainingState = await generateNewTrainingState(existingUser);
     if (!newTrainingState) {
       console.error(
         "Failed to generate new training state after workout deletion",
       );
-    }
+    } */
     return new NextResponse(null, { status: 204 });
   } catch (error) {
     console.error("Error deleting workout", error);
@@ -88,7 +89,7 @@ export async function PUT(
     });
 
   const body: CreateWorkoutBody = await req.json();
-  const { fecha, ejercicios } = body;
+  const { date:fecha, exercises:ejercicios } = body;
 
   try {
     // Usamos una transacción para asegurar que la actualización sea atómica
@@ -118,9 +119,11 @@ export async function PUT(
               let catalogEntry = await tx.query.exerciseCatalog.findFirst({
                 where: eq(exerciseCatalog.nombreNormalizado, nombreNormalizado),
               });
-
+              console.log("-- Ejercicio a buscar en el catalogo:",nombreNormalizado)
+              console.log("-- consulto si existe el ejercicio en el catalogo:",catalogEntry)
               // Si no existe, lo clasificamos e insertamos en el catálogo
               if (!catalogEntry) {
+                console.log("-- no existe, lo clasifico e inserto en el catalogo")
                 const clasifiedExercise = await classifyExercise(ex.nombre);
                 const catalogId = crypto.randomUUID();
 
@@ -128,7 +131,7 @@ export async function PUT(
                   .insert(exerciseCatalog)
                   .values({
                     id: catalogId,
-                    nombreNormalizado:clasifiedExercise.nombreEstandarizado,
+                    nombreNormalizado: clasifiedExercise.nombreEstandarizado,
                     grupoMuscular: clasifiedExercise.grupoMuscular,
                     actividad: clasifiedExercise.actividad,
                   })
@@ -152,21 +155,30 @@ export async function PUT(
               };
             }),
           );
-
+          console.log("-- Ejercicios nuevos a insertar en workoutExercises:", rows);
           // Insertamos los nuevos ejercicios actualizados
           await tx.insert(workoutExercises).values(rows);
         }
       }
     });
-    const newTrainingState = await generateNewTrainingState(existingUser);
+    /* const newTrainingState = await generateNewTrainingState(existingUser);
     if (!newTrainingState) {
       console.error(
         "Failed to generate new training state after workout update",
       );
-    }
-    return new NextResponse(null, { status: 204 });
+    } */
+    return new NextResponse(null,{ status: 204 });
   } catch (error) {
     console.error("Error updating workout", error);
-    return new NextResponse("Internal Server Error", { status: 500 });
+    return NextResponse.json<ApiResponse<null>>(
+      {
+        success: false,
+        data: null,
+        error: {
+          message: "Internal Server Error",
+        },
+      },
+      { status: 500 },
+    );
   }
 }

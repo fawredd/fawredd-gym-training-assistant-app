@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import {format, parseISO} from 'date-fns'
+import { format, parseISO } from "date-fns";
+import { ExercisesCombobox } from "@/components/dashboard/ExercicesCombobox";
+import { ApiResponse } from "@/types/api";
 
 interface Exercise {
   nombre: string;
@@ -36,20 +38,36 @@ export default function EditableWorkoutForm({
   const [ejercicios, setEjercicios] = useState<Exercise[]>(
     initialExercises.length > 0
       ? initialExercises
-      : [{ nombre: "", series: 3, repeticiones: 10, peso: 0, duracionSegundos: 0, notas: null }],
+      : [
+          {
+            nombre: "",
+            series: 3,
+            repeticiones: 10,
+            peso: 0,
+            duracionSegundos: 0,
+            notas: null,
+          },
+        ],
   );
 
   const handleAddExercise = () => {
     setEjercicios([
       ...ejercicios,
-      { nombre: "", series: 3, repeticiones: 10, peso: 0, duracionSegundos: 0, notas: null },
+      {
+        nombre: "",
+        series: 3,
+        repeticiones: 10,
+        peso: 0,
+        duracionSegundos: 0,
+        notas: null,
+      },
     ]);
   };
 
   const handleExerciseChange = (
     index: number,
     field: string,
-    value: string | number,
+    value: string | number | null,
   ) => {
     const updated = [...ejercicios];
     updated[index] = { ...updated[index], [field]: value };
@@ -66,21 +84,22 @@ export default function EditableWorkoutForm({
 
     setIsSubmitting(true);
     try {
-      const url = mode === "edit" ? `/api/workouts/${workoutId}` : "/api/workouts";
+      const url =
+        mode === "edit" ? `/api/workouts/${workoutId}` : "/api/workouts";
       const method = mode === "edit" ? "PUT" : "POST";
 
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fecha, ejercicios }),
+        body: JSON.stringify({ date:fecha, exercises: ejercicios }),
       });
 
-      if (res.ok) {
-        router.push("/entrenamientos");
-        router.refresh();
-      } else {
-        alert("Error al guardar entrenamiento.");
+      if (!res.ok) {
+        console.log("Error updating exercise:", await res.text());
+        alert("Error al guardar entrenamiento");
       }
+      router.push("/entrenamientos");
+      return;
     } catch (error) {
       console.error(error);
     } finally {
@@ -117,7 +136,9 @@ export default function EditableWorkoutForm({
           type="date"
           required
           value={fecha}
-          onChange={(e) => setFecha(format(parseISO(e.target.value), 'yyyy-MM-dd'))}
+          onChange={(e) =>
+            setFecha(format(parseISO(e.target.value), "yyyy-MM-dd"))
+          }
         />
       </div>
 
@@ -138,7 +159,15 @@ export default function EditableWorkoutForm({
             <CardContent className="pt-6 grid gap-4">
               <div className="space-y-2">
                 <Label htmlFor={`nombre-${i}`}>Nombre (ej. Press Banca)</Label>
-                <Input
+                <ExercisesCombobox
+                  id={`nombre-${i}`}
+                  required
+                  value={ex.nombre}
+                  onValueChange={(value) =>
+                    handleExerciseChange(i, "nombre", value)
+                  }
+                />
+                {/* <Input
                   id={`nombre-${i}`}
                   type="text"
                   required
@@ -146,7 +175,7 @@ export default function EditableWorkoutForm({
                   onChange={(e) =>
                     handleExerciseChange(i, "nombre", e.target.value)
                   }
-                />
+                /> */}
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-2">
