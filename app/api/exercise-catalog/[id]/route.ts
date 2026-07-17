@@ -29,7 +29,9 @@ export async function PUT(
 
   const { id } = context.params;
   const body = await req.json();
-  const nombreNormalizado = String(body.nombreNormalizado || "").trim().toLowerCase();
+  const nombreNormalizado = String(body.nombreNormalizado || "")
+    .trim()
+    .toLowerCase();
   const grupoMuscular = String(body.grupoMuscular || "").trim();
   const actividad = String(body.actividad || "").trim() || "musculacion";
 

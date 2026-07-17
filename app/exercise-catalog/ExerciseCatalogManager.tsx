@@ -24,7 +24,9 @@ const defaultFormState = {
   actividad: "musculacion",
 };
 
-export default function ExerciseCatalogManager({ initialItems }: ExerciseCatalogManagerProps) {
+export default function ExerciseCatalogManager({
+  initialItems,
+}: ExerciseCatalogManagerProps) {
   const [items, setItems] = useState<ExerciseCatalogItem[]>(initialItems);
   const [form, setForm] = useState(defaultFormState);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -153,7 +155,8 @@ export default function ExerciseCatalogManager({ initialItems }: ExerciseCatalog
           <div>
             <h2 className="text-xl font-semibold">Agregar nuevo ejercicio</h2>
             <p className="text-sm text-muted-foreground">
-              Define un ejercicio con su nombre normalizado, grupo muscular y tipo de actividad.
+              Define un ejercicio con su nombre normalizado, grupo muscular y
+              tipo de actividad.
             </p>
           </div>
 
@@ -169,7 +172,9 @@ export default function ExerciseCatalogManager({ initialItems }: ExerciseCatalog
               <Input
                 id="nombreNormalizado"
                 value={form.nombreNormalizado}
-                onChange={(event) => handleFormChange("nombreNormalizado", event.target.value)}
+                onChange={(event) =>
+                  handleFormChange("nombreNormalizado", event.target.value)
+                }
                 placeholder="press banca plano"
                 required
               />
@@ -180,7 +185,9 @@ export default function ExerciseCatalogManager({ initialItems }: ExerciseCatalog
               <Input
                 id="grupoMuscular"
                 value={form.grupoMuscular}
-                onChange={(event) => handleFormChange("grupoMuscular", event.target.value)}
+                onChange={(event) =>
+                  handleFormChange("grupoMuscular", event.target.value)
+                }
                 placeholder="Pecho"
                 required
               />
@@ -191,7 +198,9 @@ export default function ExerciseCatalogManager({ initialItems }: ExerciseCatalog
               <Input
                 id="actividad"
                 value={form.actividad}
-                onChange={(event) => handleFormChange("actividad", event.target.value)}
+                onChange={(event) =>
+                  handleFormChange("actividad", event.target.value)
+                }
                 placeholder="musculacion"
                 required
               />
@@ -211,7 +220,8 @@ export default function ExerciseCatalogManager({ initialItems }: ExerciseCatalog
           <div>
             <h2 className="text-xl font-semibold">Catálogo de ejercicios</h2>
             <p className="text-sm text-muted-foreground">
-              Administra los ejercicios normalizados usados en el historial de entrenamiento.
+              Administra los ejercicios normalizados usados en el historial de
+              entrenamiento.
             </p>
           </div>
           <Button type="button" onClick={refresh} disabled={isSaving}>
@@ -236,7 +246,12 @@ export default function ExerciseCatalogManager({ initialItems }: ExerciseCatalog
                     {editingId === item.id ? (
                       <Input
                         value={editValues.nombreNormalizado}
-                        onChange={(event) => handleEditChange("nombreNormalizado", event.target.value)}
+                        onChange={(event) =>
+                          handleEditChange(
+                            "nombreNormalizado",
+                            event.target.value,
+                          )
+                        }
                         required
                       />
                     ) : (
@@ -247,7 +262,9 @@ export default function ExerciseCatalogManager({ initialItems }: ExerciseCatalog
                     {editingId === item.id ? (
                       <Input
                         value={editValues.grupoMuscular}
-                        onChange={(event) => handleEditChange("grupoMuscular", event.target.value)}
+                        onChange={(event) =>
+                          handleEditChange("grupoMuscular", event.target.value)
+                        }
                         required
                       />
                     ) : (
@@ -258,7 +275,9 @@ export default function ExerciseCatalogManager({ initialItems }: ExerciseCatalog
                     {editingId === item.id ? (
                       <Input
                         value={editValues.actividad}
-                        onChange={(event) => handleEditChange("actividad", event.target.value)}
+                        onChange={(event) =>
+                          handleEditChange("actividad", event.target.value)
+                        }
                         required
                       />
                     ) : (
