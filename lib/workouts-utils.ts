@@ -1,6 +1,8 @@
+'use server';
 import { db } from "@/db";
-import { User, workouts } from "@/db/schema";
+import { exerciseCatalog, User, workoutExercises, workouts,ExerciseCatalogRow } from "@/db/schema";
 import { desc, eq } from "drizzle-orm";
+import { classifyExercise } from "./muscleClassifier";
 
 export async function fetchRecentWorkoutsAsMDTable(existingUser: User): Promise<string> {
 
@@ -56,3 +58,109 @@ export async function fetchRecentWorkoutsAsMDTable(existingUser: User): Promise<
     
   return workoutsPrompt
   }
+
+  
+ // Tipamos la estructura de entrada común que usaremos
+export interface WorkoutInput {
+  date: string;
+  exercises: {
+    nombre: string;
+    series?: number | null;
+    repeticiones?: number | null;
+    peso?: number | null;
+    duracionSegundos?: number | null;
+    notas?: string | null;
+  }[];
+}
+
+export interface NewWorkoutInput {
+  workoutId: string;
+  date: string;
+  numExercises: number;
+}
+
+export async function saveWorkoutsWithExercises(
+  userId: string,
+  workoutsData: WorkoutInput[]
+) {
+  const insertedWorkouts:NewWorkoutInput[] = [];
+
+  // Usamos una transacción para asegurar consistencia
+  await db.transaction(async (tx) => {
+    for (const w of workoutsData) {
+      const workoutId = crypto.randomUUID();
+
+      // 1. Crear el entrenamiento principal
+      await tx.insert(workouts).values({
+        id: workoutId,
+        userId,
+        fecha: w.date,
+      });
+
+      if (w.exercises && w.exercises.length > 0) {
+        // 2. Procesar, catalogar e insertar cada ejercicio
+        const rows = await Promise.all(
+          w.exercises.map(async (ex) => {
+            const nombreNormalizado = ex.nombre.trim().toLowerCase();
+
+            // Buscar en el catálogo
+            let catalogEntry = await tx.query.exerciseCatalog.findFirst({
+              where: eq(exerciseCatalog.nombreNormalizado, nombreNormalizado),
+            });
+
+            // Si no existe, clasificar e insertar en catálogo
+            if (!catalogEntry) {
+              const clasifiedExercise = await classifyExercise(ex.nombre);
+            
+              const catalogId = crypto.randomUUID();
+
+              const [inserted] = await tx
+                .insert(exerciseCatalog)
+                .values({
+                  id: catalogId,
+                  nombreNormalizado,
+                  grupoMuscular: clasifiedExercise.grupoMuscular,
+                  actividad: clasifiedExercise.actividad,
+                })
+                .returning();
+
+              catalogEntry = inserted;
+            }
+
+            // Retornar objeto listo para workout_exercises
+            return {
+              id: crypto.randomUUID(),
+              workoutId,
+              exerciseCatalogId: catalogEntry.id,
+              nombre: catalogEntry.nombreNormalizado,
+              series: ex.series ?? 1,
+              repeticiones: ex.repeticiones ?? 0,
+              peso: ex.peso ?? 0,
+              duracionSegundos: ex.duracionSegundos ?? 0,
+              grupoMuscular: catalogEntry.grupoMuscular,
+              notas: ex.notas ?? null, // Nota del usuario no se almacena en esta versión
+            };
+          })
+        );
+
+        await tx.insert(workoutExercises).values(rows);
+      }
+
+      insertedWorkouts.push({
+        workoutId,
+        date: w.date,
+        numExercises: w.exercises.length,
+      });
+    }
+  });
+
+  return insertedWorkouts;
+}
+
+export async function fetchExerciseCatalog(): Promise<ExerciseCatalogRow[]> {
+  
+  const catalog = await db.query.exerciseCatalog.findMany({
+    orderBy: [desc(exerciseCatalog.nombreNormalizado)],
+  });
+  return catalog;
+}

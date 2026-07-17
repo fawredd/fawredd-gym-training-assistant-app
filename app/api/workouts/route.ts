@@ -1,9 +1,12 @@
 import { NextResponse, NextRequest } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { db } from "../../../db";
-import { workouts, workoutExercises, users } from "../../../db/schema";
+import { db } from "@/db";
+import {
+  workouts,
+  users,
+} from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
-import { classifyExercise } from "@/lib/muscleClassifier";
+import { saveWorkoutsWithExercises, WorkoutInput } from "@/lib/workouts-utils";
 
 export async function GET() {
   const { userId } = await auth();
@@ -20,19 +23,21 @@ export async function GET() {
     where: eq(workouts.userId, existingUser.id),
     orderBy: [desc(workouts.fecha)],
     with: {
-      exercises: true,
+      exercises: {
+        with: {
+          exercise: true, // This fetches the exerciseCatalog relation
+        },
+      },
     },
   });
 
   return NextResponse.json(userWorkouts);
 }
 
+
 export async function POST(req: NextRequest) {
   const { userId } = await auth();
   if (!userId) return new NextResponse("Unauthorized", { status: 401 });
-
-  const body = await req.json();
-  const { fecha, ejercicios } = body;
 
   const existingUser = await db.query.users.findFirst({
     where: eq(users.externalAuthId, userId),
@@ -41,33 +46,21 @@ export async function POST(req: NextRequest) {
   if (!existingUser) return new NextResponse("User not found", { status: 404 });
 
   try {
-    const workoutId = crypto.randomUUID();
+    const body = await req.json();
+    const { date, exercises }: WorkoutInput = body;
 
-    // Create the workout
-    await db.insert(workouts).values({
-      id: workoutId,
-      userId: existingUser.id,
-      fecha,
-    });
+    const workoutInput: WorkoutInput = {
+      date,
+      exercises
+    };
 
-    // Create the exercises if any
-    if (ejercicios && ejercicios.length > 0) {
-      const rows = await Promise.all(
-        ejercicios.map(async (ex: any) => ({
-          id: crypto.randomUUID(),
-          workoutId: workoutId,
-          nombre: ex.nombre,
-          series: ex.series,
-          repeticiones: ex.repeticiones,
-          peso: ex.peso,
-          duracionSegundos: ex.duracionSegundos,
-          grupoMuscular: await classifyExercise(ex.nombre), 
-        })),
-      );
-      await db.insert(workoutExercises).values(rows);
-    }
+    const [inserted] = await saveWorkoutsWithExercises(
+      existingUser.id,
+      [workoutInput], // Pasamos el único workout dentro de un array
+    );
 
-    return NextResponse.json({ id: workoutId }, { status: 201 });
+    return NextResponse.json({ id: inserted.workoutId }, { status: 201 });
+
   } catch (error) {
     console.error("Error creating workout:", error);
     return new NextResponse("Internal API Error", { status: 500 });

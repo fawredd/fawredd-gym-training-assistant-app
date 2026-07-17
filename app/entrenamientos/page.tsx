@@ -117,6 +117,7 @@ export default async function EntrenamientosPage() {
                             className="flex justify-between items-center"
                           >
                             <span className="font-medium">{ex.grupoMuscular}: {ex.nombre}</span>
+                            <span className="font-medium">Notas: {ex.notas}</span>
                             <span className="text-muted-foreground">
                               {ex.duracionSegundos &&
                               ex.duracionSegundos > 0 ? (

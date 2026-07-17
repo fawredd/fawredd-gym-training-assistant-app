@@ -1,10 +1,15 @@
 import { NextResponse, NextRequest } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { db } from "../../../../db";
-import { workouts, workoutExercises, users } from "../../../../db/schema";
+import { db } from "@/db";
+import {
+  workouts,
+  workoutExercises,
+  users,
+  exerciseCatalog,
+} from "@/db/schema";
 import { eq, and } from "drizzle-orm";
-import { MuscleGroup, classifyExercise } from "@/lib/muscleClassifier";
-import {generateNewTrainingState} from "@/lib/training-state-utils"
+import { classifyExercise } from "@/lib/muscleClassifier";
+import { generateNewTrainingState } from "@/lib/training-state-utils";
 
 interface Exercise {
   nombre: string;
@@ -12,7 +17,8 @@ interface Exercise {
   repeticiones?: number;
   peso?: number;
   duracionSegundos?: number;
-  grupoMuscular?: MuscleGroup;
+  grupoMuscular?: string;
+  notas?: string | null;
 }
 
 type CreateWorkoutBody = {
@@ -49,7 +55,9 @@ export async function DELETE(
     await db.delete(workouts).where(eq(workouts.id, id));
     const newTrainingState = await generateNewTrainingState(existingUser);
     if (!newTrainingState) {
-      console.error("Failed to generate new training state after workout deletion");
+      console.error(
+        "Failed to generate new training state after workout deletion",
+      );
     }
     return new NextResponse(null, { status: 204 });
   } catch (error) {
@@ -83,8 +91,9 @@ export async function PUT(
   const { fecha, ejercicios } = body;
 
   try {
-    // Use a transaction to ensure update + delete/insert exercises are atomic
+    // Usamos una transacción para asegurar que la actualización sea atómica
     await db.transaction(async (tx) => {
+      // 1. Actualizamos la fecha del workout si viene en el body
       if (fecha) {
         await tx
           .update(workouts)
@@ -92,30 +101,68 @@ export async function PUT(
           .where(eq(workouts.id, id));
       }
 
+      // 2. Si se envía la lista de ejercicios, reemplazamos los anteriores
       if (ejercicios) {
+        // Eliminamos los ejercicios viejos vinculados a este workout
         await tx
           .delete(workoutExercises)
           .where(eq(workoutExercises.workoutId, id));
+
         if (ejercicios.length > 0) {
+          // Procesamos, catalogamos y mapeamos los nuevos ejercicios
           const rows = await Promise.all(
-            ejercicios.map(async (ex: Exercise) => ({
-              id: crypto.randomUUID(),
-              workoutId: id,
-              nombre: ex.nombre,
-              series: ex.series,
-              repeticiones: ex.repeticiones,
-              peso: ex.peso,
-              duracionSegundos: ex.duracionSegundos,
-              grupoMuscular: await classifyExercise(ex.nombre),
-            })),
+            ejercicios.map(async (ex) => {
+              const nombreNormalizado = ex.nombre.trim().toLowerCase();
+
+              // Buscamos si ya existe en el catálogo (usando 'tx')
+              let catalogEntry = await tx.query.exerciseCatalog.findFirst({
+                where: eq(exerciseCatalog.nombreNormalizado, nombreNormalizado),
+              });
+
+              // Si no existe, lo clasificamos e insertamos en el catálogo
+              if (!catalogEntry) {
+                const clasifiedExercise = await classifyExercise(ex.nombre);
+                const catalogId = crypto.randomUUID();
+
+                const [inserted] = await tx
+                  .insert(exerciseCatalog)
+                  .values({
+                    id: catalogId,
+                    nombreNormalizado:clasifiedExercise.nombreEstandarizado,
+                    grupoMuscular: clasifiedExercise.grupoMuscular,
+                    actividad: clasifiedExercise.actividad,
+                  })
+                  .returning();
+
+                catalogEntry = inserted;
+              }
+
+              // Retornamos el registro listo para asociar al workout
+              return {
+                id: crypto.randomUUID(),
+                workoutId: id, // El id del workout que estamos editando
+                exerciseCatalogId: catalogEntry.id,
+                nombre: catalogEntry.nombreNormalizado, // Guardamos el nombre normalizado
+                series: ex.series,
+                repeticiones: ex.repeticiones ?? 0,
+                peso: ex.peso ?? 0,
+                duracionSegundos: ex.duracionSegundos ?? 0,
+                grupoMuscular: catalogEntry.grupoMuscular,
+                notas: ex.notas ?? null,
+              };
+            }),
           );
+
+          // Insertamos los nuevos ejercicios actualizados
           await tx.insert(workoutExercises).values(rows);
         }
       }
     });
     const newTrainingState = await generateNewTrainingState(existingUser);
     if (!newTrainingState) {
-      console.error("Failed to generate new training state after workout update");
+      console.error(
+        "Failed to generate new training state after workout update",
+      );
     }
     return new NextResponse(null, { status: 204 });
   } catch (error) {

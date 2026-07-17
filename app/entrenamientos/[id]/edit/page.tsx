@@ -50,6 +50,7 @@ export default async function EditWorkoutPage({
         repeticiones: ex.repeticiones ?? 0,
         peso: ex.peso ?? 0,
         duracionSegundos: ex.duracionSegundos ?? 0,
+        notas: ex.notas ?? "",
     }));
 
     return (

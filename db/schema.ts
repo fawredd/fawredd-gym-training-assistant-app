@@ -50,12 +50,15 @@ export const workoutExercises = fawreddGymSchema.table("workout_exercises", {
   workoutId: text("workout_id")
     .notNull()
     .references(() => workouts.id, { onDelete: "cascade" }),
-  nombre: text("nombre").notNull(),
+  exerciseCatalogId: text("exercise_catalog_id")
+    .references(() => exerciseCatalog.id), // trazabilidad, nullable por si falla el match
+  nombre: text("nombre").notNull(), // va a ser reemplazado por el nombre normalizado en exercise_catalog si se encuentra match
   series: integer("series").default(1),
   repeticiones: integer("repeticiones").default(0),
   peso: integer("peso").default(0),
   duracionSegundos: integer("duracion_segundos").default(0),
-  grupoMuscular: text("grupo_muscular").notNull().default("Otros - sin definir"),
+  grupoMuscular: text("grupo_muscular").notNull().default("Otros - sin definir"), // va a ser reemplazado por el grupo muscular en exercise_catalog si se encuentra match
+  notas: text("notas"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -71,8 +74,20 @@ export const workoutExercisesRelations = relations(
       fields: [workoutExercises.workoutId],
       references: [workouts.id],
     }),
+    exercise: one(exerciseCatalog, {
+    fields: [workoutExercises.exerciseCatalogId],
+    references: [exerciseCatalog.id],
   }),
+  })
 );
+
+export const exerciseCatalog = fawreddGymSchema.table("exercise_catalog", {
+  id: text("id").primaryKey(),
+  nombreNormalizado: text("nombre_normalizado").notNull().unique(), // output de normalize()
+  grupoMuscular: text("grupo_muscular").notNull(),
+  actividad: text("actividad").notNull().default("musculacion"), // musculacion, cardio, estiramiento, movilidad, etc.
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
 
 export const aiMemories = fawreddGymSchema.table("ai_memories", {
   id: text("id").primaryKey(),
@@ -186,6 +201,7 @@ export type AiLog             = typeof aiLogs.$inferSelect;
 export type TrainingObjective = typeof trainingObjectives.$inferSelect;
 export type TrainingState     = typeof trainingStates.$inferSelect;
 export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;
+export type ExerciseCatalogRow = typeof exerciseCatalog.$inferSelect;
 
 // INSERT types (para crear registros — campos con default son opcionales)
 export type NewUser              = typeof users.$inferInsert;
@@ -196,3 +212,4 @@ export type NewAiLog             = typeof aiLogs.$inferInsert;
 export type NewTrainingObjective = typeof trainingObjectives.$inferInsert;
 export type NewTrainingState     = typeof trainingStates.$inferInsert;
 export type NewPushSubscription  = typeof pushSubscriptions.$inferInsert;
+export type NewExerciseCatalog   = typeof exerciseCatalog.$inferInsert;

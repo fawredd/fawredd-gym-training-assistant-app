@@ -14,6 +14,7 @@ interface Exercise {
   repeticiones?: number;
   peso?: number;
   duracionSegundos?: number; // en segundos, opcional
+  notas?: string | null; // notas opcionales
 }
 
 interface EditableWorkoutFormProps {
@@ -35,13 +36,13 @@ export default function EditableWorkoutForm({
   const [ejercicios, setEjercicios] = useState<Exercise[]>(
     initialExercises.length > 0
       ? initialExercises
-      : [{ nombre: "", series: 3, repeticiones: 10, peso: 0, duracionSegundos: 0 }],
+      : [{ nombre: "", series: 3, repeticiones: 10, peso: 0, duracionSegundos: 0, notas: null }],
   );
 
   const handleAddExercise = () => {
     setEjercicios([
       ...ejercicios,
-      { nombre: "", series: 3, repeticiones: 10, peso: 0, duracionSegundos: 0 },
+      { nombre: "", series: 3, repeticiones: 10, peso: 0, duracionSegundos: 0, notas: null },
     ]);
   };
 
@@ -216,6 +217,18 @@ export default function EditableWorkoutForm({
                     }
                   />
                 </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor={`notas-${i}`}>Notas</Label>
+                <Input
+                  id={`notas-${i}`}
+                  type="text"
+                  required
+                  value={ex.notas ?? ""}
+                  onChange={(e) =>
+                    handleExerciseChange(i, "notas", e.target.value)
+                  }
+                />
               </div>
             </CardContent>
           </Card>

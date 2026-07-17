@@ -4,15 +4,14 @@ import { db } from "../../../db";
 import {
   users,
   aiMemories,
-  trainingStates,
 } from "../../../db/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { google } from "@ai-sdk/google";
 import { streamText } from "ai";
 import { kv } from "@vercel/kv";
-import { parseAIResponse, TrainingState } from "@/lib/ai-response";
-import { mapTrainingStateToDB, getLatestTrainingStateAsMDTable, generateNewTrainingState } from "@/lib/training-state-utils";
+import { parseAIResponse} from "@/lib/ai-response";
+import { getLatestTrainingStateAsMDTable, generateNewTrainingState } from "@/lib/training-state-utils";
 import { format } from "date-fns";
 import { fetchRecentWorkoutsAsMDTable } from "@/lib/workouts-utils";
 import { fetchLatestTrainingObjective } from "@/lib/user-objective-utils";

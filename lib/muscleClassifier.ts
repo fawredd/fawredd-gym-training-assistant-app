@@ -1,269 +1,81 @@
-import { createOpenRouter } from "@openrouter/ai-sdk-provider";
-// import { generateObject } from "ai";
+import { db } from "@/db";
+import { exerciseCatalog } from "@/db/schema";
+import { google } from "@ai-sdk/google";
+import { generateText, Output } from "ai";
 import { z } from "zod";
 
-const openrouter = createOpenRouter({
-  apiKey: process.env.OPENROUTER_API_KEY,
-});
 
-// ==============================
-// Types
-// ==============================
-export const MUSCLE_GROUPS = [
-  "Pecho",
-  "Espalda Alta",
-  "Espalda Baja",
-  "Hombros",
-  "Bíceps",
-  "Tríceps",
-  "Cuádriceps",
-  "Isquiotibiales",
-  "Aductores",
-  "Glúteos medio y menor",
-  "Glúteo mayor",
-  "Gemelos",
-  "Abdominales",
-  "Core",
-  "Flexiones de brazos",
-  "Aerobico",
-] as const;
+export async function classifyExercise(descripcionEjercicio: string) {
+  // 1. Obtenemos el catálogo actual para dárselo como contexto / ejemplos a la IA
+  const currentCatalog = await db
+    .select({
+      nombre: exerciseCatalog.nombreNormalizado,
+      grupo: exerciseCatalog.grupoMuscular,
+      actividad: exerciseCatalog.actividad,
+    })
+    .from(exerciseCatalog);
 
-export const muscleGroupSchema = z.union([
-  z.enum(MUSCLE_GROUPS),
-  z.string().startsWith("Otros - ", { 
-    message: "Si no es un grupo estándar, debe empezar con 'Otros - '" 
-  })
-]);
-
-export type MuscleGroup = (typeof MUSCLE_GROUPS)[number] | `Otros - ${string}`;
-
-// ==============================
-// Normalización
-// ==============================
-
-// Centralizada y exportable para poder normalizar también los keywords
-function normalize(text: string): string {
-  return text
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
-}
-
-// ==============================
-// Reglas específicas (multi-keyword, mayor prioridad)
-// Todos los keywords ya normalizados (sin tildes, minúsculas)
-// ==============================
-
-const SPECIFIC_RULES: { keywords: string[]; group: MuscleGroup }[] = [
-  // --- PRESS ---
-  { keywords: ["press", "hombro"], group: "Hombros" },
-  { keywords: ["press", "militar"], group: "Hombros" },
-  { keywords: ["press", "inclinado"], group: "Pecho" },
-  { keywords: ["press", "declinado"], group: "Pecho" },
-  { keywords: ["press", "pecho"], group: "Pecho" },
-
-  // --- EXTENSION (ambigua sin contexto: cuádriceps vs tríceps) ---
-  { keywords: ["extension", "cuadricep"], group: "Cuádriceps" },
-  { keywords: ["extension", "pierna"], group: "Cuádriceps" },
-  { keywords: ["extension", "rodilla"], group: "Cuádriceps" },
-  { keywords: ["extension", "tricep"], group: "Tríceps" },
-  { keywords: ["extension", "polea"], group: "Tríceps" },
-  { keywords: ["extension", "cuerda"], group: "Tríceps" },
-  { keywords: ["extension", "bajos"], group: "Tríceps" }, // polea bajos
-
-  // --- CURL (ambiguo: bíceps vs isquios) ---
-  { keywords: ["curl", "femoral"], group: "Isquiotibiales" },
-  { keywords: ["curl", "isquio"], group: "Isquiotibiales" },
-  { keywords: ["curl", "pierna"], group: "Isquiotibiales" },
-  { keywords: ["curl", "martillo"], group: "Bíceps" },
-  { keywords: ["hammer", "curl"], group: "Bíceps" },
-
-  // --- CALISTENIA ---
-  { keywords: ["pull", "up"], group: "Espalda Alta" },
-  { keywords: ["chin", "up"], group: "Espalda Alta" },
-  { keywords: ["fondos", "paralelas"], group: "Pecho" },
-  { keywords: ["fondos", "banco"], group: "Tríceps" },
-
-  // --- CORE FUNCIONAL ---
-  { keywords: ["dead", "bug"], group: "Core" },
-  { keywords: ["bird", "dog"], group: "Core" },
-  { keywords: ["hollow"], group: "Core" },
-
-  // --- CADENA POSTERIOR ---
-  { keywords: ["hip", "thrust"], group: "Glúteo mayor" },
-  { keywords: ["peso", "muerto"], group: "Espalda Baja" },
-  { keywords: ["deadlift"], group: "Espalda Baja" },
-  { keywords: ["romanian"], group: "Isquiotibiales" }, // RDL → isquios
-
-  // --- PIERNAS / MÁQUINAS ---
-  { keywords: ["zancadas"], group: "Cuádriceps" },
-  { keywords: ["lunges"], group: "Cuádriceps" },
-
-  // --- PIERNAS / GEMELOS ---
-  { keywords: ["elevacion", "talon"], group: "Gemelos" },
-  // Espinales → espalda baja
-  { keywords: ["espinal"], group: "Espalda Baja" },
-
-  // Pájaros (deltoide posterior) → hombros
-  { keywords: ["pajaro"], group: "Hombros" },
-  { keywords: ["deltoide", "posterior"], group: "Hombros" },
-
-  // Fondos asistidos → tríceps
-  { keywords: ["fondos", "asistidos"], group: "Tríceps" },
-
-  // Circuitos → core (decisión práctica consistente)
-  { keywords: ["circuito"], group: "Core" },
-
-  // Movilidad + estiramientos → core
-  { keywords: ["movilidad", "estiramiento"], group: "Core" },
-
-  // Descanso activo → aeróbico
-  { keywords: ["descanso", "activo"], group: "Aerobico" },
-
-  // Natación con texto largo → aeróbico
-  { keywords: ["natacion"], group: "Aerobico" },
-];
-
-// ==============================
-// Keywords simples (unambiguous, orden importa)
-// Todos normalizados — sin tildes, minúsculas
-// ==============================
-
-const SIMPLE_KEYWORDS: [string, MuscleGroup][] = [
-  // --- Pecho ---
-  ["pecho", "Pecho"],
-  ["press", "Pecho"],   // fallback: sin calificador → pecho es más común
-  ["aperturas", "Pecho"],
-  ["fly", "Pecho"],
-	
-	//Flexiones de brazos
-  ["flexion", "Flexiones de brazos"],
-
-  // --- Espalda Alta ---
-  ["remo", "Espalda Alta"],
-  ["jalon", "Espalda Alta"],
-  ["dominadas", "Espalda Alta"],
-  ["pull", "Espalda Alta"],
-  ["espalda", "Espalda Alta"],
-
-  // --- Espalda Baja ---
-  ["lumbar", "Espalda Baja"],
-
-  // --- Hombros ---
-  ["hombro", "Hombros"],
-  ["deltoides", "Hombros"],
-  ["elevaciones", "Hombros"],
-
-  // --- Bíceps ---
-  ["bicep", "Bíceps"],
-  ["curl", "Bíceps"],   // fallback: sin calificador → bíceps es más común
-
-  // --- Tríceps ---
-  ["tricep", "Tríceps"],
-  ["patada", "Tríceps"],
-  // "extension" eliminada — demasiado ambigua, se maneja en SPECIFIC_RULES
-
-  // --- Cuádriceps ---
-  ["sentadilla", "Cuádriceps"],
-  ["squat", "Cuádriceps"],
-  ["prensa", "Cuádriceps"],
-  ["cuadricep", "Cuádriceps"],
-
-  // --- Isquiotibiales ---
-  ["isquiotibial", "Isquiotibiales"],  // ← "maquina isquiotibiales sentado" ✓
-  ["femoral", "Isquiotibiales"],
-
-  // --- Aductores ---
-  ["aduccion", "Aductores"],  // ← "maquina aduccion sentado" ✓
-  ["aductor", "Aductores"],
-
-  // --- Abductores ---
-  ["abduccion", "Glúteos medio y menor"],  // ← "maquina abduccion sentado" ✓
-  ["abductor", "Glúteos medio y menor"],
-
-  // --- Glúteos ---
-  ["gluteo", "Glúteo mayor"],
-  ["puente", "Glúteo mayor"],
-  ["hip", "Glúteo mayor"],
-
-  // --- Gemelos ---
-  ["gemelo", "Gemelos"],
-  ["pantorrilla", "Gemelos"],
-  ["calf", "Gemelos"],
-
-  // --- Abdominales ---
-  ["abdomen", "Abdominales"],
-  ["abdominal", "Abdominales"],
-  ["crunch", "Abdominales"],
-
-  // --- Core ---
-  ["plancha", "Core"],
-  ["plank", "Core"],
-  ["core", "Core"],
-  ["rotacion", "Core"],
-  ["russian", "Core"],
-  ["burpee", "Core"],
-  ["mountain", "Core"],
-   // Aeróbico (cardio puro)
-  ["bicicleta", "Aerobico"],
-  ["cinta", "Aerobico"],
-  ["trote", "Aerobico"],
-  ["eliptico", "Aerobico"],
-  ["caminar", "Aerobico"],
-  ["caminata", "Aerobico"],
-  ["jumping", "Aerobico"],
-
-  // Estiramientos / movilidad (fallback si no entra en específica)
-  ["estiramiento", "Core"],
-  ["movilidad", "Core"],
-];
-
-// ==============================
-// Clasificador principal
-// ==============================
-
-export async function classifyExercise(nombre: string): Promise<MuscleGroup> {
-  const lower = normalize(nombre);
-
-  // 1️⃣ Reglas compuestas (mayor prioridad)
-  for (const rule of SPECIFIC_RULES) {
-    // FIX: normalizar cada keyword antes de comparar
-    if (rule.keywords.every((k) => lower.includes(normalize(k)))) {
-      return rule.group;
-    }
-  }
-
-  // 2️⃣ Fallback: keyword simple
-  for (const [keyword, group] of SIMPLE_KEYWORDS) {
-    // FIX: normalizar el keyword antes de comparar
-    if (lower.includes(normalize(keyword))) {
-      return group;
-    }
-  }
-  const localResult: MuscleGroup = `Otros - ${lower}`;
-  return localResult
-  
-/*   const muscleGroupSchema = z.object({
-    group: z.enum(MUSCLE_GROUPS),
+  // 2. Llamamos a la IA pasándole el catálogo existente
+  const result = await generateText({
+    model: google("gemini-3.1-flash-lite"),
+    system: `Eres un experto analista de datos de fitness. Tu trabajo es recibir un nombre de ejercicio o actividad ingresado por un usuario y normalizarlo.
+    
+    Tienes acceso al catálogo actual de la aplicación para usarlo como guía de estilo y consistencia:
+    ${JSON.stringify(currentCatalog, null, 2)}
+    
+    Tus tareas obligatorias son:
+    1. Analizar el texto ingresado y extraer el nombre del ejercicio o actividad principal, ignorando cualquier detalle adicional (ej: "press de banca con barra" -> "press de banca").   
+    2. Limpiar el resto del texto para obtener el 'nombreEstandarizado' real del ejercicio en minúsculas y sin errores ortográficos.
+    3. Si el 'nombreEstandarizado' resultante coincide semánticamente con alguno del catálogo actual, adopta EXACTAMENTE ese nombre para mantener la consistencia.
+    4. Clasificar el grupo muscular principal y el tipo de actividad de forma coherente con el catálogo provisto.
+    
+    ⚠️ REGLA DE NEGOCIO CRÍTICA:
+    Deportes o actividades recreativas (ej: "fútbol 5", "pádel", "natación") NO se combinan con ejercicios tradicionales de gimnasio. Deben quedar con su propio nombre estandarizado (ej: "fútbol 5"), actividad: 'cardio' y grupo muscular apropiado (ej: 'piernas' o 'fullbody').`,
+    prompt: `Texto ingresado por el usuario a clasificar: "${descripcionEjercicio}"`,
+    output: Output.object({
+      schema: z.object({
+        nombreEstandarizado: z.string().describe("El nombre limpio del ejercicio en minúsculas"),
+        grupoMuscular: z.string().describe("Grupo muscular principal"),
+        actividad: z.enum(["musculacion", "cardio", "estiramiento", "movilidad"]),
+      }),
+    }),
   });
-  // 2️⃣ Fallback: AI solo cuando las reglas no alcanzaron
-  try {
-    const { object } = await generateObject({
-      model: openrouter("openrouter/free"),
-      schema: muscleGroupSchema,
-      prompt: `Eres un experto en anatomía y fitness. Clasifica este ejercicio de gimnasio en el grupo muscular principal que trabaja.
-Ejercicio: "${nombre}"
-Responde SOLO con uno de estos grupos:
-${MUSCLE_GROUPS.join(", ")}
-Si el ejercicio trabaja principalmente el core/estabilizadores, responde "Core".
-Si es un ejercicio abdominal de contracción, responde "Abdominales".`
-Si el ejercicio es flexiones de brazos, responde "Flexiones",
-    });
 
-    return object.group;
-  } catch (err) {
-    // Si la API falla (rate limit, red, etc.) devolvemos el resultado local
-    console.warn("[classifyExercise] AI fallback failed:", err);
-    return localResult;
-  } */
+  if (!result.output) {
+    throw new Error("La IA no pudo procesar la clasificación del ejercicio.");
+  }
+
+  return result.output;
 }
+
+//CREATE A Zod schema for the muscle group and activity based on the current database values
+const exerciseGroups = await db
+  .selectDistinct({ 
+    grupoMuscular: exerciseCatalog.grupoMuscular, 
+    actividad: exerciseCatalog.actividad 
+  })
+  .from(exerciseCatalog);
+
+// 2. Map the database objects to unique, flat string arrays
+// (Using Set ensures we don't have duplicates if the combinations overlap)
+const validMuscleGroups = Array.from(new Set(
+  exerciseGroups.map(row => row.grupoMuscular).filter(Boolean)
+));
+
+const validActivities = Array.from(new Set(
+  exerciseGroups.map(row => row.actividad).filter(Boolean)
+));
+
+// 3. Create the schemas utilizing .refine()
+export const exerciseMuscleGroupSchema = z.string().refine(
+  (val) => validMuscleGroups.includes(val),
+  {
+    message: `Invalid muscle group. Must be one of: ${validMuscleGroups.join(", ")}`
+  }
+);
+export const exerciseActivitySchema = z.string().refine(
+  (val) => validActivities.includes(val),
+  {
+    message: `Invalid activity. Must be one of: ${validActivities.join(", ")}`
+  }
+);

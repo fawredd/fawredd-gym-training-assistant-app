@@ -91,7 +91,8 @@ export default async function DashboardPage() {
   type DbWorkout = (typeof recentWorkouts)[number];
   type DbExercise = DbWorkout["exercises"][number];
 
-  type Exercise = Omit<DbExercise, "createdAt">;
+  type Exercise = Omit<DbExercise, "createdAt" | "exerciseCatalogId">;
+  
   interface Workout {
     id: string;
     userId: string;
@@ -124,6 +125,7 @@ export default async function DashboardPage() {
         repeticiones: ex.repeticiones,
         duracionSegundos: ex.duracionSegundos,
         grupoMuscular: ex.grupoMuscular,
+        notas: ex.notas,
         createdAt: ex.createdAt.toISOString(),
         workoutId: ex.workoutId,
       })),

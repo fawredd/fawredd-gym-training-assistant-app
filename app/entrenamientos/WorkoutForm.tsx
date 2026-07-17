@@ -7,17 +7,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import {format, parseISO} from 'date-fns'
+import { ExercisesCombobox } from '@/components/dashboard/ExercicesCombobox';
 
 export default function WorkoutForm() {
     const router = useRouter();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [fecha, setFecha] = useState(format(new Date(), 'yyyy-MM-dd'));
     const [ejercicios, setEjercicios] = useState([
-        { nombre: '', series: 3, repeticiones: 0, peso: 0, duracionSegundos: 0 },
+        { nombre: '', series: 3, repeticiones: 0, peso: 0, duracionSegundos: 0, notas: "" },
     ]);
 
     const handleAddExercise = () => {
-        setEjercicios([...ejercicios, { nombre: '', series: 3, repeticiones: 0, peso: 0, duracionSegundos: 0 }]);
+        setEjercicios([...ejercicios, { nombre: '', series: 3, repeticiones: 0, peso: 0, duracionSegundos: 0, notas: "" }]);
     };
 
     const handleExerciseChange = (index: number, field: string, value: string | number) => {
@@ -44,7 +45,7 @@ export default function WorkoutForm() {
             });
 
             if (res.ok) {
-                setEjercicios([{ nombre: '', series: 3, repeticiones: 0, peso: 0, duracionSegundos: 0 }]);
+                setEjercicios([{ nombre: '', series: 3, repeticiones: 0, peso: 0, duracionSegundos: 0, notas: "" }]);
                 router.refresh();
             } else {
                 alert("Error al guardar entrenamiento");
@@ -86,6 +87,7 @@ export default function WorkoutForm() {
                         <CardContent className="pt-6 grid gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor={`nombre-${i}`}>Nombre (ej. Press Banca)</Label>
+                                <ExercisesCombobox id={`nombre-${i}`} value={ex.nombre} onValueChange={(value) => handleExerciseChange(i, 'nombre', value)} />
                                 <Input id={`nombre-${i}`} type="text" required value={ex.nombre} onChange={(e) => handleExerciseChange(i, 'nombre', e.target.value)} />
                             </div>
                             <div className="grid grid-cols-3 gap-3">
@@ -106,6 +108,11 @@ export default function WorkoutForm() {
                                     <Input id={`duracion-${i}`} type="number" required min="0" value={ex.duracionSegundos} onChange={(e) => handleExerciseChange(i, 'duracionSegundos', parseFloat(e.target.value))} />
                                 </div>
                             </div>
+                            <div className="space-y-2">
+                                <Label htmlFor={`notas-${i}`}>Notas</Label>
+                                <Input id={`notas-${i}`} type="text" value={ex.notas} onChange={(e) => handleExerciseChange(i, 'notas', e.target.value)} />
+                            </div>
+                            
                         </CardContent>
                     </Card>
                 ))}
