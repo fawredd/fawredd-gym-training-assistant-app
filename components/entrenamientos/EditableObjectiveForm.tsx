@@ -68,7 +68,7 @@ Escribe tus preferencias:
 ━━━━━━━━━━━━━━━━━━
 IMPORTANTE
 
-Quiero que las rutinas se adapten a mi progreso y a mi historial de entrenamiento para que sean desafiantes pero seguras.`
+Quiero que las rutinas se adapten a mi progreso y a mi historial de entrenamiento para que sean desafiantes pero seguras.`;
 
 export default function EditableObjectiveForm({
   initial,

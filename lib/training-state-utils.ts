@@ -1,6 +1,12 @@
 import { TrainingState as TrainingStateDbMap } from "./ai-response";
 import { db } from "@/db";
-import { User, NewTrainingState, trainingStates, trainingObjectives, workouts } from "@/db/schema";
+import {
+  User,
+  NewTrainingState,
+  trainingStates,
+  trainingObjectives,
+  workouts,
+} from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { format } from "date-fns";
 import { fetchLatestTrainingObjective } from "./user-objective-utils";
@@ -47,12 +53,11 @@ export async function getLatestTrainingStateAsMDTable(
     orderBy: [desc(workouts.createdAt)],
   });
   if (
-    latestObjective && 
-    latestWorkout && 
-    (
-    differenceInDays(latestObjective?.updatedAt,latestState.createdAt)>0 ||
-    differenceInDays(latestWorkout?.createdAt,latestState.createdAt)>0 
-    )){
+    latestObjective &&
+    latestWorkout &&
+    (differenceInDays(latestObjective?.updatedAt, latestState.createdAt) > 0 ||
+      differenceInDays(latestWorkout?.createdAt, latestState.createdAt) > 0)
+  ) {
     const newTrainingState = await generateNewTrainingState(existingUser);
     if (!newTrainingState) {
       return "Training state outdated. Failed to generate new training state";
@@ -62,7 +67,7 @@ export async function getLatestTrainingStateAsMDTable(
   // 3. Construimos el string en formato Markdown optimizado para el prompt de la IA
   const markdownPrompt = `
 # 🏋️‍♂️ ÚLTIMO ESTADO DE ENTRENAMIENTO REGISTRADO
-| **Fecha de Registro** | ${format(latestState.createdAt,"yyyy-MM-dd")} |
+| **Fecha de Registro** | ${format(latestState.createdAt, "yyyy-MM-dd")} |
 
 ## 🎯 Objetivos y Enfoque
 * **Metas Prioritarias:** ${latestState.priorityGoals}

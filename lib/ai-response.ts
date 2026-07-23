@@ -1,6 +1,12 @@
-import { type AIRoutineResponse, aiRoutineResponseSchema } from "@/lib/schemas/ai-routine";
+import {
+  type AIRoutineResponse,
+  aiRoutineResponseSchema,
+} from "@/lib/schemas/ai-routine";
 
-export type { AIRoutineResponse, TrainingState } from "@/lib/schemas/ai-routine";
+export type {
+  AIRoutineResponse,
+  TrainingState,
+} from "@/lib/schemas/ai-routine";
 
 export function isAIRoutineResponse(obj: unknown): obj is AIRoutineResponse {
   return aiRoutineResponseSchema.safeParse(obj).success;
@@ -62,7 +68,7 @@ export function formatAIResponseForUI(data: AIRoutineResponse): string {
       if (ex.duracion && ex.duracion != 0) {
         // Usamos las series y la duración en segundos
         detalle = `${ex.series}x${ex.duracion}s`;
-      } 
+      }
       // 2. Si es un ejercicio de repeticiones tradicionales
       else {
         detalle = `${ex.series}x${ex.reps}`;
