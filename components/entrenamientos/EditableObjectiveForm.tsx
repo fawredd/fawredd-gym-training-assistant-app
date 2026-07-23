@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
+import { MAX_OBJECTIVE_CONTENT_LENGTH } from "@/lib/schemas/objective";
+
 const objectivePlaceHolder = `
 OBJETIVO DE ENTRENAMIENTO
 
@@ -76,6 +78,9 @@ export default function EditableObjectiveForm({
   const [value, setValue] = useState(initial ?? objectivePlaceHolder);
   const [saving, setSaving] = useState(false);
 
+  const currentLength = useMemo(() => value.length, [value]);
+  const isOverLimit = currentLength > MAX_OBJECTIVE_CONTENT_LENGTH;
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -113,19 +118,30 @@ export default function EditableObjectiveForm({
         </Link>
       </div>
       <div className="flex flex-col rounded-xl flex-1">
-        <label className="block text-sm font-medium  mb-2">
-          Objetivo (descriptivo)
-        </label>
+        <div className="flex items-center justify-between gap-3 mb-2">
+          <label className="block text-sm font-medium">
+            Objetivo (descriptivo)
+          </label>
+          <span
+            className={`text-xs ${isOverLimit ? "text-destructive" : "text-muted-foreground"}`}
+            aria-live="polite"
+          >
+            {currentLength} / {MAX_OBJECTIVE_CONTENT_LENGTH} caracteres
+          </span>
+        </div>
         <textarea
           value={value}
           onChange={(e) => setValue(e.target.value)}
           className="w-full flex-1 p-3 rounded border border-border resize-none overflow-y-auto"
         />
+        <p className="mt-2 text-xs text-muted-foreground">
+          Máximo permitido: {MAX_OBJECTIVE_CONTENT_LENGTH} caracteres.
+        </p>
         <div className="mt-4 flex justify-end">
           <button
             type="submit"
             className="rounded bg-primary text-primary-foreground px-4 py-2"
-            disabled={saving}
+            disabled={saving || isOverLimit}
           >
             {saving ? "Guardando…" : "Guardar"}
           </button>

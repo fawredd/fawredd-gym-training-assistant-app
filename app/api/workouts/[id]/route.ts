@@ -11,21 +11,10 @@ import { eq, and } from "drizzle-orm";
 import { classifyExercise } from "@/lib/muscleClassifier";
 import { generateNewTrainingState } from "@/lib/training-state-utils";
 import { ApiResponse } from "@/types/api";
-
-interface Exercise {
-  nombre: string;
-  series: number;
-  repeticiones?: number;
-  peso?: number;
-  duracionSegundos?: number;
-  grupoMuscular?: string;
-  notas?: string | null;
-}
-
-type CreateWorkoutBody = {
-  date: string; // "YYYY-MM-DD"
-  exercises: Exercise[];
-};
+import {
+  workoutUpdateInputSchema,
+  type WorkoutUpdateInput,
+} from "@/lib/schemas/workout";
 
 export async function DELETE(
   req: NextRequest,
@@ -88,8 +77,11 @@ export async function PUT(
       status: 403,
     });
 
-  const body: CreateWorkoutBody = await req.json();
-  const { date:fecha, exercises:ejercicios } = body;
+  const body = await req.json();
+  const parsedBody = workoutUpdateInputSchema.safeParse(body);
+  const { date: fecha, exercises: ejercicios } = (
+    parsedBody.success ? parsedBody.data : (body as WorkoutUpdateInput)
+  ) as WorkoutUpdateInput;
 
   try {
     // Usamos una transacción para asegurar que la actualización sea atómica
@@ -119,11 +111,19 @@ export async function PUT(
               let catalogEntry = await tx.query.exerciseCatalog.findFirst({
                 where: eq(exerciseCatalog.nombreNormalizado, nombreNormalizado),
               });
-              console.log("-- Ejercicio a buscar en el catalogo:",nombreNormalizado)
-              console.log("-- consulto si existe el ejercicio en el catalogo:",catalogEntry)
+              console.log(
+                "-- Ejercicio a buscar en el catalogo:",
+                nombreNormalizado,
+              );
+              console.log(
+                "-- consulto si existe el ejercicio en el catalogo:",
+                catalogEntry,
+              );
               // Si no existe, lo clasificamos e insertamos en el catálogo
               if (!catalogEntry) {
-                console.log("-- no existe, lo clasifico e inserto en el catalogo")
+                console.log(
+                  "-- no existe, lo clasifico e inserto en el catalogo",
+                );
                 const clasifiedExercise = await classifyExercise(ex.nombre);
                 const catalogId = crypto.randomUUID();
 
@@ -155,7 +155,10 @@ export async function PUT(
               };
             }),
           );
-          console.log("-- Ejercicios nuevos a insertar en workoutExercises:", rows);
+          console.log(
+            "-- Ejercicios nuevos a insertar en workoutExercises:",
+            rows,
+          );
           // Insertamos los nuevos ejercicios actualizados
           await tx.insert(workoutExercises).values(rows);
         }
@@ -167,7 +170,7 @@ export async function PUT(
         "Failed to generate new training state after workout update",
       );
     } */
-    return new NextResponse(null,{ status: 204 });
+    return new NextResponse(null, { status: 204 });
   } catch (error) {
     console.error("Error updating workout", error);
     return NextResponse.json<ApiResponse<null>>(

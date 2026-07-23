@@ -1,69 +1,9 @@
-export interface TrainingState {
-  priority_goals: string;
-  secondary_goals: string;
-  progression_focus: string;
-  weak_areas: string;
-  recovery_notes: string;
-  weekly_strategy: string;
-  recommendation_next: string;
-  user_traning_evolution_analysis: string;
-}
+import { type AIRoutineResponse, aiRoutineResponseSchema } from "@/lib/schemas/ai-routine";
 
-
-export interface AIRoutineResponse {
-  resumen: string;
-  rutina: {
-    grupo: string;
-    justificacion: string;
-    ejercicios: {
-      nombre: string;
-      series: number;
-      reps: number | string;
-      duracion: number | string; // ← el modelo libre devuelve "45 segundos" o 5
-      peso: number | string; // ← el modelo libre devuelve "20 kg" o 20
-    }[];
-  };
-  training_state: TrainingState;
-}
+export type { AIRoutineResponse, TrainingState } from "@/lib/schemas/ai-routine";
 
 export function isAIRoutineResponse(obj: unknown): obj is AIRoutineResponse {
-  if (typeof obj !== "object" || obj === null) return false;
-  const o = obj as Record<string, unknown>;
-
-  // 1. Validar la raíz ("resumen" y "rutina")
-  if (
-    typeof o.resumen !== "string" ||
-    typeof o.rutina !== "object" ||
-    o.rutina === null
-  ) {
-    return false;
-  }
-
-  const rutina = o.rutina as Record<string, unknown>;
-
-  // 2. Validar los campos de "rutina" ("grupo", "justificacion" y "ejercicios")
-  if (
-    typeof rutina.grupo !== "string" ||
-    typeof rutina.justificacion !== "string" ||
-    !Array.isArray(rutina.ejercicios)
-  ) {
-    return false;
-  }
-
-  // 3. Validar que cada ejercicio tenga la estructura correcta (opcional pero muy recomendado)
-  const ejerciciosValidos = rutina.ejercicios.every((ej: unknown) => {
-    if (typeof ej !== "object" || ej === null) return false;
-    const e = ej as Record<string, unknown>;
-    return (
-      typeof e.nombre === "string" &&
-      typeof e.series === "number" &&
-      typeof e.reps === "number" &&
-      typeof e.duracion === "number" &&
-      typeof e.peso === "number"
-    );
-  });
-
-  return ejerciciosValidos;
+  return aiRoutineResponseSchema.safeParse(obj).success;
 }
 
 function sanitizeJSON(raw: string): string {

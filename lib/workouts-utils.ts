@@ -1,11 +1,19 @@
-'use server';
+"use server";
 import { db } from "@/db";
-import { exerciseCatalog, User, workoutExercises, workouts,ExerciseCatalogRow } from "@/db/schema";
+import {
+  exerciseCatalog,
+  User,
+  workoutExercises,
+  workouts,
+  ExerciseCatalogRow,
+} from "@/db/schema";
 import { desc, eq } from "drizzle-orm";
 import { classifyExercise } from "./muscleClassifier";
+import { type NewWorkoutInput, type WorkoutInput } from "@/lib/schemas/workout";
 
-export async function fetchRecentWorkoutsAsMDTable(existingUser: User): Promise<string> {
-
+export async function fetchRecentWorkoutsAsMDTable(
+  existingUser: User,
+): Promise<string> {
   // Reduce payload size: fetch only last 10 workouts and trim exercise fields
   const recentWorkoutsRaw = await db.query.workouts.findMany({
     where: eq(workouts.userId, existingUser.id),
@@ -51,40 +59,20 @@ export async function fetchRecentWorkoutsAsMDTable(existingUser: User): Promise<
           `${exercise.series ?? 0}x${exercise.repeticiones ?? 0}`,
           `${exercise.peso ?? 0}kg`,
           exercise.grupoMuscular,
-          notes.length ? notes.join(", ") : exercise.notas ?? "-",
+          notes.length ? notes.join(", ") : (exercise.notas ?? "-"),
         ].join(" | ");
       }),
     )
     .join("\n");
-    
-  return workoutsPrompt
-  }
 
-  
- // Tipamos la estructura de entrada común que usaremos
-export interface WorkoutInput {
-  date: string;
-  exercises: {
-    nombre: string;
-    series?: number | null;
-    repeticiones?: number | null;
-    peso?: number | null;
-    duracionSegundos?: number | null;
-    notas?: string | null;
-  }[];
-}
-
-export interface NewWorkoutInput {
-  workoutId: string;
-  date: string;
-  numExercises: number;
+  return workoutsPrompt;
 }
 
 export async function saveWorkoutsWithExercises(
   userId: string,
-  workoutsData: WorkoutInput[]
+  workoutsData: WorkoutInput[],
 ) {
-  const insertedWorkouts:NewWorkoutInput[] = [];
+  const insertedWorkouts: NewWorkoutInput[] = [];
 
   // Usamos una transacción para asegurar consistencia
   await db.transaction(async (tx) => {
@@ -112,7 +100,7 @@ export async function saveWorkoutsWithExercises(
             // Si no existe, clasificar e insertar en catálogo
             if (!catalogEntry) {
               const clasifiedExercise = await classifyExercise(ex.nombre);
-            
+
               const catalogId = crypto.randomUUID();
 
               const [inserted] = await tx
@@ -141,7 +129,7 @@ export async function saveWorkoutsWithExercises(
               grupoMuscular: catalogEntry.grupoMuscular,
               notas: ex.notas ?? null, // Nota del usuario no se almacena en esta versión
             };
-          })
+          }),
         );
 
         await tx.insert(workoutExercises).values(rows);
@@ -159,7 +147,6 @@ export async function saveWorkoutsWithExercises(
 }
 
 export async function fetchExerciseCatalog(): Promise<ExerciseCatalogRow[]> {
-  
   const catalog = await db.query.exerciseCatalog.findMany({
     orderBy: [desc(exerciseCatalog.nombreNormalizado)],
   });

@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { db } from "@/db";
 import { exerciseCatalog } from "@/db/schema";
 import { asc, eq } from "drizzle-orm";
+import { exerciseCatalogCreateInputSchema } from "@/lib/schemas/exercise-catalog";
 
 export async function GET() {
   const { userId } = await auth();
@@ -20,18 +21,16 @@ export async function POST(req: NextRequest) {
   if (!userId) return new NextResponse("Unauthorized", { status: 401 });
 
   const body = await req.json();
-  const nombreNormalizado = String(body.nombreNormalizado || "")
-    .trim()
-    .toLowerCase();
-  const grupoMuscular = String(body.grupoMuscular || "").trim();
-  const actividad = String(body.actividad || "").trim() || "musculacion";
+  const parsedBody = exerciseCatalogCreateInputSchema.safeParse(body);
 
-  if (!nombreNormalizado || !grupoMuscular || !actividad) {
+  if (!parsedBody.success) {
     return new NextResponse("Invalid body", { status: 400 });
   }
 
+  const { nombreNormalizado, grupoMuscular, actividad } = parsedBody.data;
+
   const existing = await db.query.exerciseCatalog.findFirst({
-    where: eq(exerciseCatalog.nombreNormalizado,nombreNormalizado),
+    where: eq(exerciseCatalog.nombreNormalizado, nombreNormalizado),
   });
   if (existing) {
     return new NextResponse("Exercise with that name already exists", {

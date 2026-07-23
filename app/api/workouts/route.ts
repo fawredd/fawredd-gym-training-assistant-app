@@ -3,20 +3,25 @@ import { auth } from "@clerk/nextjs/server";
 import { db } from "@/db";
 import { workouts, users } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
-import { saveWorkoutsWithExercises, WorkoutInput } from "@/lib/workouts-utils";
+import { saveWorkoutsWithExercises } from "@/lib/workouts-utils";
+import {
+  workoutCreateInputSchema,
+  type WorkoutInput,
+} from "@/lib/schemas/workout";
 
 export async function GET() {
   const { userId } = await auth();
-  if (!userId) return NextResponse.json(
-    {
-      success: false,
-      data: null,
-      error: {
-        message: "Unauthorized",
+  if (!userId)
+    return NextResponse.json(
+      {
+        success: false,
+        data: null,
+        error: {
+          message: "Unauthorized",
+        },
       },
-    },
-    { status: 401 }
-  );
+      { status: 401 },
+    );
 
   const existingUser = await db.query.users.findFirst({
     where: eq(users.externalAuthId, userId),
@@ -71,7 +76,10 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { date, exercises }: WorkoutInput = body;
+    const parsedBody = workoutCreateInputSchema.safeParse(body);
+    const { date, exercises } = (
+      parsedBody.success ? parsedBody.data : (body as WorkoutInput)
+    ) as WorkoutInput;
 
     const workoutInput: WorkoutInput = {
       date,
