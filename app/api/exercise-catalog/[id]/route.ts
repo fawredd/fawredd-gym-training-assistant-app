@@ -6,12 +6,12 @@ import { eq } from "drizzle-orm";
 
 export async function GET(
   _req: NextRequest,
-  context: { params: { id: string } },
+  context: { params: Promise<{ id: string }> },
 ) {
   const { userId } = await auth();
   if (!userId) return new NextResponse("Unauthorized", { status: 401 });
 
-  const { id } = context.params;
+  const { id } = await context.params;
   const item = await db.query.exerciseCatalog.findFirst({
     where: eq(exerciseCatalog.id, id),
   });
@@ -22,12 +22,12 @@ export async function GET(
 
 export async function PUT(
   req: NextRequest,
-  context: { params: { id: string } },
+  context: { params: Promise<{ id: string }> },
 ) {
   const { userId } = await auth();
   if (!userId) return new NextResponse("Unauthorized", { status: 401 });
 
-  const { id } = context.params;
+  const { id } = await context.params;
   const body = await req.json();
   const nombreNormalizado = String(body.nombreNormalizado || "")
     .trim()
@@ -71,12 +71,12 @@ export async function PUT(
 
 export async function DELETE(
   _req: NextRequest,
-  context: { params: { id: string } },
+  context: { params: Promise<{ id: string }> },
 ) {
   const { userId } = await auth();
   if (!userId) return new NextResponse("Unauthorized", { status: 401 });
 
-  const { id } = context.params;
+  const { id } = await context.params;
   const existing = await db.query.exerciseCatalog.findFirst({
     where: eq(exerciseCatalog.id, id),
   });

@@ -141,6 +141,8 @@ export const trainingStates = fawreddGymSchema.table("training_states", {
   evolutionAnalysis: text("evolution_analysis").notNull(),
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+
 });
 
 // ─── Push Subscriptions (PWA) ────────────────────────────────────────────────

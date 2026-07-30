@@ -54,7 +54,7 @@ export async function AITrainingState() {
           🤖 Entrenador (IA)
         </h2>
         <span className="text-xs text-muted-foreground">
-          {format(latestState?.createdAt || new Date(), "dd-MM-yyyy")}
+          {format(latestState?.updatedAt || new Date(), "dd-MM-yyyy")}
         </span>
       </div>
       {latestState?.evolutionAnalysis ? (
