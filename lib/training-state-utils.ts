@@ -53,26 +53,6 @@ export async function getLatestTrainingStateAsMDTable(
   if (!latestState) {
     return "No se encontró un estado de entrenamiento registrado.";
   }
-  //Verify if training state is updated related to the latest objective and workouts dates
-  const latestObjective = await db.query.trainingObjectives.findFirst({
-    where: eq(trainingObjectives.userId, existingUser.id),
-    orderBy: [desc(trainingObjectives.updatedAt)],
-  });
-  const latestWorkout = await db.query.workouts.findFirst({
-    where: eq(workouts.userId, existingUser.id),
-    orderBy: [desc(workouts.createdAt)],
-  });
-  if (
-    latestObjective &&
-    latestWorkout &&
-    (differenceInDays(latestObjective?.updatedAt, latestState.createdAt) > 0 ||
-      differenceInDays(latestWorkout?.createdAt, latestState.createdAt) > 0)
-  ) {
-    const newTrainingState = await generateNewTrainingState(existingUser);
-    if (!newTrainingState) {
-      return "Training state outdated. Failed to generate new training state";
-    }
-  }
 
   // 3. Construimos el string en formato Markdown optimizado para el prompt de la IA
   const markdownPrompt = `
@@ -241,6 +221,12 @@ export async function generateNewTrainingState(
   ${workoutsPrompt}
   [Last workouts - end]
   `;
+  if (process.env.NODE_ENV === "development") {
+    console.log(
+      " -- GENERANDO NUEVO ESTADO DE ENTRENAMIENTO PARA USUARIO:",
+      existingUser.id,
+    );
+  }
   try {
     const result = await generateText({
       model: google("gemini-3.1-flash-lite"),
@@ -258,6 +244,8 @@ export async function generateNewTrainingState(
     const newTrainingState = result.output;
 
     try {
+      const now = new Date();
+
       // 1. Consultamos el último estado de entrenamiento generado por la IA
       const latestState = await db.query.trainingStates.findFirst({
         where: eq(trainingStates.userId, existingUser.id),
@@ -266,21 +254,35 @@ export async function generateNewTrainingState(
       if (latestState) {
         await db
           .update(trainingStates)
-          .set(newTrainingState)
+          .set({
+            ...newTrainingState,
+            updatedAt: now,
+          })
           .where(eq(trainingStates.id, latestState.id));
       } else {
         await db.insert(trainingStates).values({
           id: crypto.randomUUID(),
           userId: existingUser.id,
           ...newTrainingState,
+          updatedAt: now,
         });
       }
     } catch (e) {
       console.warn("Failed to persist training state", e);
     }
+    if (process.env.NODE_ENV === "development") {
+      console.log(" -- NUEVO ESTADO DE ENTRENAMIENTO GENERADO");
+    }
     return newTrainingState;
   } catch (error) {
     console.error("Error generating new training state:", error);
     throw new Error("Failed to generate new training state.");
+  } finally {
+    if (process.env.NODE_ENV === "development") {
+      console.log(
+        " -- CIERRE PROCESO DE GENERACION DE NUEVO ESTADO DE ENTRENAMIENTO PARA USUARIO:",
+        existingUser.id,
+      );
+    }
   }
 }

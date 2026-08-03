@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-export const MAX_PROMPT_SEGMENT_LENGTH = 2000;
-export const MAX_ROUTINE_GROUP_LENGTH = 80;
+export const MAX_PROMPT_SEGMENT_LENGTH = 5000;
+export const MAX_ROUTINE_GROUP_LENGTH = 1000;
 export const MAX_TEXT_LENGTH = 250;
 
 export const trainingStateSchema = z.object({

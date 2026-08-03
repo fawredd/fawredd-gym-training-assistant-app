@@ -6,10 +6,12 @@ import {
   workoutExercises,
   workouts,
   ExerciseCatalogRow,
+  users,
 } from "@/db/schema";
 import { desc, eq } from "drizzle-orm";
 import { classifyExercise } from "./muscleClassifier";
 import { type NewWorkoutInput, type WorkoutInput } from "@/lib/schemas/workout";
+import { generateNewTrainingState } from "./training-state-utils";
 
 export async function fetchRecentWorkoutsAsMDTable(
   existingUser: User,
@@ -73,6 +75,12 @@ export async function saveWorkoutsWithExercises(
   workoutsData: WorkoutInput[],
 ) {
   const insertedWorkouts: NewWorkoutInput[] = [];
+
+  const existingUser = await db.query.users.findFirst({
+    where: eq(users.externalAuthId, userId),
+  });
+  if (!existingUser)
+    throw new Error("User profile not found");
 
   // Usamos una transacción para asegurar consistencia
   await db.transaction(async (tx) => {
@@ -142,7 +150,8 @@ export async function saveWorkoutsWithExercises(
       });
     }
   });
-
+  const newTrainingState = await generateNewTrainingState(existingUser);
+  
   return insertedWorkouts;
 }
 

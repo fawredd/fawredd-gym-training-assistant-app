@@ -193,6 +193,9 @@ The workout MUST mix:
 
 Requirements:
 - Total routine time should be around 60-90 minutes.
+- The routine MUST contain at least 7 exercises and ideally 8 exercises for a normal session.
+- Do NOT return a minimalist routine with only 3-6 exercises.
+- Include a balanced distribution across movement patterns: push, pull, squat/hinge, unilateral leg work, core, and at least 1 exercise directly tied to the user's main goal.
 - New exercises must be realistic and fit a commercial gym.
 - New exercises must be a progression or variation of movement patterns found in history (push, pull, squat, hinge, lunge, core, shoulders, arms, legs, core).
 
@@ -217,7 +220,8 @@ Requirements:
 - Spanish only
 - series,reps and weight must be numbers
 - No extra text
-- if last workout is today, tell the user the exercises are for the next day of training.
+- The routine must contain between 7 and 9 exercises.
+- If last workout is today, tell the user the exercises are for the next day of training.
 
 ##OUTPUT (STRICT JSON ONLY, NO TEXT OUTSIDE JSON):
 {
