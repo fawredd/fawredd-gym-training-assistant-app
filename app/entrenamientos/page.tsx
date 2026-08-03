@@ -114,11 +114,16 @@ export default async function EntrenamientosPage() {
                         {w.exercises.map((ex) => (
                           <li
                             key={ex.id}
-                            className="flex justify-between items-center"
+                            className="grid grid-cols-[70%_30%] items-center"
                           >
-                            <span className="font-medium">{ex.grupoMuscular}: {ex.nombre}</span>
-                            <span className="font-medium">Notas: {ex.notas}</span>
-                            <span className="text-muted-foreground">
+                            <span className="font-medium">
+                              {ex.grupoMuscular}: {ex.nombre}
+                              <br/>
+                              <span className="text-xs text-muted-foreground">
+                                {ex.notas !== '' && `- Notas: ${ex.notas}`}
+                              </span>  
+                            </span>
+                            <span className="text-muted-foreground text-right">
                               {ex.duracionSegundos &&
                               ex.duracionSegundos > 0 ? (
                                 <span className="font-mono bg-primary/10 text-primary px-2 py-0.5 rounded">

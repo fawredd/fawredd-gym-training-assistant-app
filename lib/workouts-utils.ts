@@ -77,81 +77,89 @@ export async function saveWorkoutsWithExercises(
   const insertedWorkouts: NewWorkoutInput[] = [];
 
   const existingUser = await db.query.users.findFirst({
-    where: eq(users.externalAuthId, userId),
+    where: eq(users.id, userId),
   });
   if (!existingUser)
-    throw new Error("User profile not found");
+    throw new Error("Saving workout failed: User profile not found");
 
   // Usamos una transacción para asegurar consistencia
   await db.transaction(async (tx) => {
     for (const w of workoutsData) {
       const workoutId = crypto.randomUUID();
 
-      // 1. Crear el entrenamiento principal
-      await tx.insert(workouts).values({
-        id: workoutId,
-        userId,
-        fecha: w.date,
-      });
+      // 1. Crear el entrenamiento principal y asegurar que exista antes de insertar hijos
+      const [insertedWorkout] = await tx
+        .insert(workouts)
+        .values({
+          id: workoutId,
+          userId,
+          fecha: w.date,
+        })
+        .returning({ id: workouts.id });
+
+      if (!insertedWorkout?.id) {
+        throw new Error("Failed to create workout parent row");
+      }
+
+      const persistedWorkoutId = insertedWorkout.id;
 
       if (w.exercises && w.exercises.length > 0) {
-        // 2. Procesar, catalogar e insertar cada ejercicio
-        const rows = await Promise.all(
-          w.exercises.map(async (ex) => {
-            const nombreNormalizado = ex.nombre.trim().toLowerCase();
+        // 2. Procesar, catalogar e insertar cada ejercicio de forma secuencial
+        const rows = [];
 
-            // Buscar en el catálogo
-            let catalogEntry = await tx.query.exerciseCatalog.findFirst({
-              where: eq(exerciseCatalog.nombreNormalizado, nombreNormalizado),
-            });
+        for (const ex of w.exercises) {
+          const nombreNormalizado = ex.nombre.trim().toLowerCase();
 
-            // Si no existe, clasificar e insertar en catálogo
-            if (!catalogEntry) {
-              const clasifiedExercise = await classifyExercise(ex.nombre);
+          // Buscar en el catálogo
+          let catalogEntry = await tx.query.exerciseCatalog.findFirst({
+            where: eq(exerciseCatalog.nombreNormalizado, nombreNormalizado),
+          });
 
-              const catalogId = crypto.randomUUID();
+          // Si no existe, clasificar e insertar en catálogo
+          if (!catalogEntry) {
+            const clasifiedExercise = await classifyExercise(ex.nombre);
 
-              const [inserted] = await tx
-                .insert(exerciseCatalog)
-                .values({
-                  id: catalogId,
-                  nombreNormalizado,
-                  grupoMuscular: clasifiedExercise.grupoMuscular,
-                  actividad: clasifiedExercise.actividad,
-                })
-                .returning();
+            const catalogId = crypto.randomUUID();
 
-              catalogEntry = inserted;
-            }
+            const [inserted] = await tx
+              .insert(exerciseCatalog)
+              .values({
+                id: catalogId,
+                nombreNormalizado,
+                grupoMuscular: clasifiedExercise.grupoMuscular,
+                actividad: clasifiedExercise.actividad,
+              })
+              .returning();
 
-            // Retornar objeto listo para workout_exercises
-            return {
-              id: crypto.randomUUID(),
-              workoutId,
-              exerciseCatalogId: catalogEntry.id,
-              nombre: catalogEntry.nombreNormalizado,
-              series: ex.series ?? 1,
-              repeticiones: ex.repeticiones ?? 0,
-              peso: ex.peso ?? 0,
-              duracionSegundos: ex.duracionSegundos ?? 0,
-              grupoMuscular: catalogEntry.grupoMuscular,
-              notas: ex.notas ?? null, // Nota del usuario no se almacena en esta versión
-            };
-          }),
-        );
+            catalogEntry = inserted;
+          }
+
+          rows.push({
+            id: crypto.randomUUID(),
+            workoutId: persistedWorkoutId,
+            exerciseCatalogId: catalogEntry.id,
+            nombre: catalogEntry.nombreNormalizado,
+            series: ex.series ?? 1,
+            repeticiones: ex.repeticiones ?? 0,
+            peso: ex.peso ?? 0,
+            duracionSegundos: ex.duracionSegundos ?? 0,
+            grupoMuscular: catalogEntry.grupoMuscular,
+            notas: ex.notas ?? null,
+          });
+        }
 
         await tx.insert(workoutExercises).values(rows);
       }
 
       insertedWorkouts.push({
-        workoutId,
+        workoutId: persistedWorkoutId,
         date: w.date,
         numExercises: w.exercises.length,
       });
     }
   });
   const newTrainingState = await generateNewTrainingState(existingUser);
-  
+
   return insertedWorkouts;
 }
 
