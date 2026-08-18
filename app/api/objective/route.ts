@@ -1,5 +1,6 @@
 import { NextResponse, NextRequest } from "next/server";
 import { auth } from "@clerk/nextjs/server";
+import { kv } from "@vercel/kv";
 import { db } from "../../../db";
 import { trainingObjectives, users } from "../../../db/schema";
 import { eq, desc } from "drizzle-orm";
@@ -61,10 +62,72 @@ export async function PUT(req: NextRequest) {
   });
   if (!existingUser) return new NextResponse("User not found", { status: 404 });
 
+  const incomingIdempotencyKey =
+    req.headers.get("Idempotency-Key") ??
+    req.headers.get("idempotency-key") ??
+    req.headers.get("x-idempotency-key");
+
+  if (!incomingIdempotencyKey?.trim()) {
+    return NextResponse.json(
+      {
+        success: false,
+        data: null,
+        error: {
+          message: "Missing Idempotency-Key header",
+        },
+      },
+      { status: 400 },
+    );
+  }
+
+  const normalizedKey = incomingIdempotencyKey.trim();
+  const idempotencyKey = `objectives:idempotency:${existingUser.id}:${normalizedKey}`;
+  const processingKey = `${idempotencyKey}:processing`;
+
+  const cachedResponse = await kv.get<string>(idempotencyKey);
+  if (cachedResponse) {
+    try {
+      return NextResponse.json(JSON.parse(cachedResponse), { status: 200 });
+    } catch {
+      // Ignore invalid cached payload and continue.
+    }
+  }
+
+  const hasProcessingLock = await kv.set(processingKey, "1", {
+    nx: true,
+    px: 60_000,
+  });
+
+  if (!hasProcessingLock) {
+    const retryCachedResponse = await kv.get<string>(idempotencyKey);
+    if (retryCachedResponse) {
+      try {
+        return NextResponse.json(JSON.parse(retryCachedResponse), {
+          status: 200,
+        });
+      } catch {
+        // Ignore invalid cached payload and continue below.
+      }
+    }
+
+    return NextResponse.json(
+      {
+        success: false,
+        data: null,
+        error: {
+          message:
+            "An objective update is already in progress for this request.",
+        },
+      },
+      { status: 409 },
+    );
+  }
+
   let body: unknown;
   try {
     body = await req.json();
   } catch {
+    await kv.del(processingKey);
     return new NextResponse("Invalid JSON body", { status: 400 });
   }
 
@@ -97,17 +160,33 @@ export async function PUT(req: NextRequest) {
     // downstream UI is built from the same sanitized objective snapshot.
     await generateNewTrainingState(existingUser);
 
-    return new NextResponse(null, { status: 204 });
+    const successPayload = {
+      success: true,
+      data: {
+        saved: true,
+      },
+      error: null,
+    };
+
+    await kv.set(idempotencyKey, JSON.stringify(successPayload), {
+      px: 10 * 60 * 1000,
+    });
+
+    return NextResponse.json(successPayload, { status: 200 });
   } catch (error) {
     if (
       error instanceof Error &&
       (error.message.includes("Objective content") ||
         error.message.includes("Suspicious prompt content"))
     ) {
+      await kv.del(processingKey);
       return new NextResponse(error.message, { status: 400 });
     }
 
     console.error("Error saving objective", error);
+    await kv.del(processingKey);
     return new NextResponse("Internal Server Error", { status: 500 });
+  } finally {
+    await kv.del(processingKey);
   }
 }

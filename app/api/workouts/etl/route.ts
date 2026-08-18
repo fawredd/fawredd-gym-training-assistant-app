@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { kv } from "@vercel/kv";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { generateText, Output } from "ai";
 import { z } from "zod";
@@ -151,10 +152,56 @@ export async function POST(req: Request) {
   if (!existingUser)
     return new NextResponse("User profile not found", { status: 404 });
 
+  const incomingIdempotencyKey =
+    req.headers.get("Idempotency-Key") ??
+    req.headers.get("idempotency-key") ??
+    req.headers.get("x-idempotency-key");
+
+  if (!incomingIdempotencyKey?.trim()) {
+    return new NextResponse("Missing Idempotency-Key header", { status: 400 });
+  }
+
+  const normalizedKey = incomingIdempotencyKey.trim();
+  const idempotencyKey = `etl:workouts:${existingUser.id}:${normalizedKey}`;
+  const processingKey = `${idempotencyKey}:processing`;
+
+  const cachedResponse = await kv.get<string>(idempotencyKey);
+  if (cachedResponse) {
+    try {
+      return NextResponse.json(JSON.parse(cachedResponse), { status: 200 });
+    } catch {
+      // Ignore invalid cached payload and continue.
+    }
+  }
+
+  const hasProcessingLock = await kv.set(processingKey, "1", {
+    nx: true,
+    px: 60_000,
+  });
+
+  if (!hasProcessingLock) {
+    const retryCachedResponse = await kv.get<string>(idempotencyKey);
+    if (retryCachedResponse) {
+      try {
+        return NextResponse.json(JSON.parse(retryCachedResponse), {
+          status: 200,
+        });
+      } catch {
+        // Ignore invalid cached payload and continue below.
+      }
+    }
+
+    return new NextResponse(
+      "A workout ETL generation is already in progress for this request.",
+      { status: 409 },
+    );
+  }
+
   let body: unknown;
   try {
     body = await req.json();
   } catch {
+    await kv.del(processingKey);
     return new NextResponse("Invalid JSON body", { status: 400 });
   }
 
@@ -231,7 +278,12 @@ export async function POST(req: Request) {
       sanitizedOutput,
     );
 
-    return NextResponse.json({ success: true, data: insertedData });
+    const successPayload = { success: true, data: insertedData };
+    await kv.set(idempotencyKey, JSON.stringify(successPayload), {
+      px: 10 * 60 * 1000,
+    });
+
+    return NextResponse.json(successPayload);
   } catch (error) {
     if (
       error instanceof Error &&
@@ -245,5 +297,7 @@ export async function POST(req: Request) {
 
     console.error("ETL Generation failed", error);
     return new NextResponse("ETL AI Parsing failed", { status: 500 });
+  } finally {
+    await kv.del(processingKey);
   }
 }

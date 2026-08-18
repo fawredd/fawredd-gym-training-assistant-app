@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { db } from "@/db";
 import { workouts, users } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
+import { kv } from "@vercel/kv";
 import { saveWorkoutsWithExercises } from "@/lib/workouts-utils";
 import {
   workoutCreateInputSchema,
@@ -74,6 +75,67 @@ export async function POST(req: NextRequest) {
       { status: 404 },
     );
 
+  const incomingIdempotencyKey =
+    req.headers.get("Idempotency-Key") ??
+    req.headers.get("idempotency-key") ??
+    req.headers.get("x-idempotency-key");
+
+  if (!incomingIdempotencyKey?.trim()) {
+    return NextResponse.json(
+      {
+        success: false,
+        data: null,
+        error: {
+          message: "Missing Idempotency-Key header",
+        },
+      },
+      { status: 400 },
+    );
+  }
+
+  const normalizedKey = incomingIdempotencyKey.trim();
+  const idempotencyKey = `workouts:idempotency:${existingUser.id}:${normalizedKey}`;
+  const processingKey = `${idempotencyKey}:processing`;
+
+  const cachedResponse = await kv.get<string>(idempotencyKey);
+  if (cachedResponse) {
+    try {
+      return NextResponse.json(JSON.parse(cachedResponse), { status: 200 });
+    } catch {
+      // Ignore invalid cached payload and continue.
+    }
+  }
+
+  const hasProcessingLock = await kv.set(processingKey, "1", {
+    nx: true,
+    px: 60_000,
+  });
+
+  if (!hasProcessingLock) {
+    const retryCachedResponse = await kv.get<string>(idempotencyKey);
+    if (retryCachedResponse) {
+      try {
+        return NextResponse.json(JSON.parse(retryCachedResponse), {
+          status: 200,
+        });
+      } catch {
+        // Ignore invalid cached payload and continue below.
+      }
+    }
+
+    return NextResponse.json(
+      {
+        success: false,
+        data: null,
+        error: {
+          message:
+            "A workout creation is already in progress for this request.",
+        },
+      },
+      { status: 409 },
+    );
+  }
+
   try {
     const body = await req.json();
     const parsedBody = workoutCreateInputSchema.safeParse(body);
@@ -86,21 +148,23 @@ export async function POST(req: NextRequest) {
       exercises,
     };
 
-    const [inserted] = await saveWorkoutsWithExercises(
-      existingUser.id,
-      [workoutInput], // Pasamos el único workout dentro de un array
-    );
+    const [inserted] = await saveWorkoutsWithExercises(existingUser.id, [
+      workoutInput,
+    ]);
 
-    return NextResponse.json(
-      {
-        success: true,
-        data: {
-          id: inserted.workoutId,
-        },
-        error: null,
+    const successPayload = {
+      success: true,
+      data: {
+        id: inserted.workoutId,
       },
-      { status: 201 },
-    );
+      error: null,
+    };
+
+    await kv.set(idempotencyKey, JSON.stringify(successPayload), {
+      px: 10 * 60 * 1000,
+    });
+
+    return NextResponse.json(successPayload, { status: 201 });
   } catch (error) {
     console.error("Error creating workout:", error);
     return NextResponse.json(
@@ -113,5 +177,7 @@ export async function POST(req: NextRequest) {
       },
       { status: 500 },
     );
+  } finally {
+    await kv.del(processingKey);
   }
 }

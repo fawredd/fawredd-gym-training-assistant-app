@@ -109,67 +109,103 @@ function isValidAIResponse(data: unknown): data is AIRoutineResponse {
   return "resumen" in data && "rutina" in data;
 }
 
-export async function POST() {
-  // verify user authentication
+export async function POST(request: Request) {
   const { userId } = await auth();
   if (!userId) return new NextResponse("Unauthorized", { status: 401 });
-  //verify user exists in our DB
+
   const existingUser = await db.query.users.findFirst({
     where: eq(users.externalAuthId, userId),
   });
-  if (!existingUser)
-    return new NextResponse("User profile not found", { status: 404 });
 
-  if (existingUser.tipoDeUsuario > 1) {
-    // if user is admin, we skip rate limiting
-    // Rate Limiting logic using Vercel KV
+  if (!existingUser) {
+    return new NextResponse("User profile not found", { status: 404 });
+  }
+
+  const incomingIdempotencyKey =
+    request.headers.get("Idempotency-Key") ??
+    request.headers.get("idempotency-key") ??
+    request.headers.get("x-idempotency-key");
+
+  if (!incomingIdempotencyKey?.trim()) {
+    return new NextResponse("Missing Idempotency-Key header", { status: 400 });
+  }
+
+  const normalizedKey = incomingIdempotencyKey.trim();
+  const idempotencyKey = `ai:idempotency:${existingUser.id}:${normalizedKey}`;
+  const processingKey = `${idempotencyKey}:processing`;
+
+  const cachedResponse = await kv.get<string>(idempotencyKey);
+  if (cachedResponse) {
     try {
-      const rateLimitKey = `rl_ai_${existingUser.id}`;
-      const lastGenerated = await kv.get<number>(rateLimitKey);
-      const twelveHoursInMs = 1 * 60 * 60 * 1000; //Modify to 1hr for testing
-      if (
-        lastGenerated &&
-        Date.now() - lastGenerated < twelveHoursInMs &&
-        process.env.NODE_ENV === "production"
-      ) {
-        return new NextResponse("Rate limit exceeded. Please wait.", {
-          status: 429,
-        });
-      }
-      await kv.set(rateLimitKey, Date.now(), { px: twelveHoursInMs });
-    } catch (e) {
-      console.warn(
-        "KV Rate Limiter failed, skipping strict limit for dev/local.",
-        e,
-      );
+      return NextResponse.json(JSON.parse(cachedResponse));
+    } catch {
+      // Ignore invalid cached payload and continue with generation.
     }
   }
 
-  //consulto el ultimo estado de entrenamiento generado por la IA
-  const latestState = await getLatestTrainingStateAsMDTable(existingUser);
+  const hasProcessingLock = await kv.set(processingKey, "1", {
+    nx: true,
+    px: 60_000,
+  });
 
-  //consulto los ultimos entrenamientos del usuario en formato tabla markdown para pasarselo al modelo
-  const workoutsPrompt = await fetchRecentWorkoutsAsMDTable(existingUser);
+  if (!hasProcessingLock) {
+    const retryCachedResponse = await kv.get<string>(idempotencyKey);
+    if (retryCachedResponse) {
+      try {
+        return NextResponse.json(JSON.parse(retryCachedResponse));
+      } catch {
+        // Ignore invalid cached payload and continue below.
+      }
+    }
 
-  //consulto el ultimo objetivo de entrenamiento del usuario
-  const latestObjective = await fetchLatestTrainingObjective(existingUser);
+    return new NextResponse(
+      "A generation is already in progress for this request.",
+      { status: 409 },
+    );
+  }
 
-  const today = format(new Date(), "yyyy-MM-dd");
+  try {
+    if (existingUser.tipoDeUsuario > 1) {
+      try {
+        const rateLimitKey = `rl_ai_${existingUser.id}`;
+        const lastGenerated = await kv.get<number>(rateLimitKey);
+        const twelveHoursInMs = 1 * 60 * 60 * 1000;
 
-  // Security hardening: all user-originated values are sanitized and wrapped in
-  // explicit XML blocks so model instructions cannot be hijacked by malicious text.
-  const goalText = sanitizePromptSegment(
-    latestObjective?.content ?? existingUser.objetivo ?? "General fitness",
-    MAX_PROMPT_SEGMENT_LENGTH,
-  );
-  const previousStateText = sanitizePromptSegment(latestState, 4000);
-  const workoutsText = sanitizePromptSegment(workoutsPrompt, 4000);
+        if (
+          lastGenerated &&
+          Date.now() - lastGenerated < twelveHoursInMs &&
+          process.env.NODE_ENV === "production"
+        ) {
+          return new NextResponse("Rate limit exceeded. Please wait.", {
+            status: 429,
+          });
+        }
 
-  const suspiciousObjective = detectPromptInjection(goalText);
-  const safeGoalText = suspiciousObjective ? "General fitness" : goalText;
+        await kv.set(rateLimitKey, Date.now(), { px: twelveHoursInMs });
+      } catch (e) {
+        console.warn(
+          "KV Rate Limiter failed, skipping strict limit for dev/local.",
+          e,
+        );
+      }
+    }
 
-  // Keep prompt concise to reduce token usage; instruct AI to be brief and output only required JSON block
-  const systemPrompt = `You are a senior fitness coach generating the NEXT workout.
+    const latestState = await getLatestTrainingStateAsMDTable(existingUser);
+    const workoutsPrompt = await fetchRecentWorkoutsAsMDTable(existingUser);
+    const latestObjective = await fetchLatestTrainingObjective(existingUser);
+    const today = format(new Date(), "yyyy-MM-dd");
+
+    const goalText = sanitizePromptSegment(
+      latestObjective?.content ?? existingUser.objetivo ?? "General fitness",
+      MAX_PROMPT_SEGMENT_LENGTH,
+    );
+    const previousStateText = sanitizePromptSegment(latestState, 4000);
+    const workoutsText = sanitizePromptSegment(workoutsPrompt, 4000);
+
+    const suspiciousObjective = detectPromptInjection(goalText);
+    const safeGoalText = suspiciousObjective ? "General fitness" : goalText;
+
+    const systemPrompt = `You are a senior fitness coach generating the NEXT workout.
 
 Use ONLY the provided USER DATA. This is a production app → hallucinations are not allowed.
 
@@ -249,7 +285,7 @@ Requirements:
 - All text must be in Spanish
 `;
 
-  const userPrompt = `
+    const userPrompt = `
 #USER DATA:
 - [Today date]: ${wrapPromptTag("today", today)}
 - [Goal (written in spanish) - start]: ${wrapPromptTag("goal", safeGoalText)} [Goal - end]
@@ -261,14 +297,13 @@ ${wrapPromptTag("last_workouts", workoutsText)}
 [Last workouts - end]
 `;
 
-  if (process.env.NODE_ENV === "development") {
-    console.log("System prompt:", systemPrompt);
-    console.log("User prompt:", userPrompt);
-  }
-  try {
+    if (process.env.NODE_ENV === "development") {
+      console.log("System prompt:", systemPrompt);
+      console.log("User prompt:", userPrompt);
+    }
+
     let text = "";
     const result = streamText({
-      //model: google("gemini-3.5-flash"),
       model: google("gemini-3.1-flash-lite"),
       system: systemPrompt,
       prompt: userPrompt,
@@ -285,7 +320,6 @@ ${wrapPromptTag("last_workouts", workoutsText)}
       console.error("Error leyendo stream", err);
     }
 
-    // Try to extract a JSON training_state from the AI output
     const parsed = parseAIResponse(text);
 
     if (!parsed || !isValidAIResponse(parsed)) {
@@ -297,12 +331,6 @@ ${wrapPromptTag("last_workouts", workoutsText)}
 
     const sanitizedParsed = sanitizeAIResponse(parsed);
 
-    // Persist AI memory
-    console.log("--- Parsed AI response OK ---");
-    if (process.env.NODE_ENV === "development") {
-      console.log("Parsed AI response:", JSON.stringify(sanitizedParsed));
-    }
-    console.log("-----------------------------");
     try {
       console.log("--- Persisting AI memory for user ---");
       await db.insert(aiMemories).values({
@@ -319,10 +347,7 @@ ${wrapPromptTag("last_workouts", workoutsText)}
       console.log("--- Generating new training state ---");
       const newTrainingState = await generateNewTrainingState(existingUser);
       if (!newTrainingState) {
-        console.error("- No training state generated -");
-        return new NextResponse("Failed to generate new training state", {
-          status: 500,
-        });
+        throw new Error("No training state generated");
       }
       console.log("- New training state generated successfully -");
     } catch (e) {
@@ -331,15 +356,17 @@ ${wrapPromptTag("last_workouts", workoutsText)}
         status: 500,
       });
     }
+
+    await kv.set(idempotencyKey, JSON.stringify(sanitizedParsed), {
+      px: 10 * 60 * 1000,
+    });
+
     console.log("- Returning AI routine response -");
     return NextResponse.json(sanitizedParsed);
-
-    console.log("--- Failed to parse AI response:", text);
-    return new NextResponse(`AI response could not be parsed.`, {
-      status: 422,
-    });
   } catch (error) {
-    console.error("--- AI Generation failed", error);
+    console.error("--- AI Generation failed ---", error);
     return new NextResponse("AI Generation Error", { status: 500 });
+  } finally {
+    await kv.del(processingKey);
   }
 }

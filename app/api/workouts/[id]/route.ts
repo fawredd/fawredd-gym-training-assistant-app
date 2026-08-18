@@ -8,6 +8,7 @@ import {
   exerciseCatalog,
 } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
+import { kv } from "@vercel/kv";
 import { classifyExercise } from "@/lib/muscleClassifier";
 import { generateNewTrainingState } from "@/lib/training-state-utils";
 import { ApiResponse } from "@/types/api";
@@ -24,14 +25,72 @@ export async function DELETE(
   const { userId } = await auth();
   if (!userId) return new NextResponse("Unauthorized", { status: 401 });
 
-  // 1. Verify user exists
   const existingUser = await db.query.users.findFirst({
     where: eq(users.externalAuthId, userId),
   });
 
   if (!existingUser) return new NextResponse("User not found", { status: 404 });
 
-  // 2. Verify workout belongs to user
+  const incomingIdempotencyKey =
+    req.headers.get("Idempotency-Key") ??
+    req.headers.get("idempotency-key") ??
+    req.headers.get("x-idempotency-key");
+
+  if (!incomingIdempotencyKey?.trim()) {
+    return NextResponse.json(
+      {
+        success: false,
+        data: null,
+        error: {
+          message: "Missing Idempotency-Key header",
+        },
+      },
+      { status: 400 },
+    );
+  }
+
+  const normalizedKey = incomingIdempotencyKey.trim();
+  const idempotencyKey = `workouts:delete:${existingUser.id}:${id}:${normalizedKey}`;
+  const processingKey = `${idempotencyKey}:processing`;
+
+  const cachedResponse = await kv.get<string>(idempotencyKey);
+  if (cachedResponse) {
+    try {
+      return new NextResponse(JSON.parse(cachedResponse), { status: 204 });
+    } catch {
+      // Ignore invalid cached payload and continue.
+    }
+  }
+
+  const hasProcessingLock = await kv.set(processingKey, "1", {
+    nx: true,
+    px: 60_000,
+  });
+
+  if (!hasProcessingLock) {
+    const retryCachedResponse = await kv.get<string>(idempotencyKey);
+    if (retryCachedResponse) {
+      try {
+        return new NextResponse(JSON.parse(retryCachedResponse), {
+          status: 204,
+        });
+      } catch {
+        // Ignore invalid cached payload and continue below.
+      }
+    }
+
+    return NextResponse.json(
+      {
+        success: false,
+        data: null,
+        error: {
+          message: "A deletion is already in progress for this request.",
+        },
+      },
+      { status: 409 },
+    );
+  }
+
   const workoutTarget = await db.query.workouts.findFirst({
     where: and(eq(workouts.id, id), eq(workouts.userId, existingUser.id)),
   });
@@ -43,16 +102,15 @@ export async function DELETE(
 
   try {
     await db.delete(workouts).where(eq(workouts.id, id));
-    /* const newTrainingState = await generateNewTrainingState(existingUser);
-    if (!newTrainingState) {
-      console.error(
-        "Failed to generate new training state after workout deletion",
-      );
-    } */
+    await kv.set(idempotencyKey, JSON.stringify({ ok: true }), {
+      px: 10 * 60 * 1000,
+    });
     return new NextResponse(null, { status: 204 });
   } catch (error) {
     console.error("Error deleting workout", error);
     return new NextResponse("Internal Server Error", { status: 500 });
+  } finally {
+    await kv.del(processingKey);
   }
 }
 
@@ -69,6 +127,66 @@ export async function PUT(
   });
   if (!existingUser) return new NextResponse("User not found", { status: 404 });
 
+  const incomingIdempotencyKey =
+    req.headers.get("Idempotency-Key") ??
+    req.headers.get("idempotency-key") ??
+    req.headers.get("x-idempotency-key");
+
+  if (!incomingIdempotencyKey?.trim()) {
+    return NextResponse.json(
+      {
+        success: false,
+        data: null,
+        error: {
+          message: "Missing Idempotency-Key header",
+        },
+      },
+      { status: 400 },
+    );
+  }
+
+  const normalizedKey = incomingIdempotencyKey.trim();
+  const idempotencyKey = `workouts:update:${existingUser.id}:${id}:${normalizedKey}`;
+  const processingKey = `${idempotencyKey}:processing`;
+
+  const cachedResponse = await kv.get<string>(idempotencyKey);
+  if (cachedResponse) {
+    try {
+      return new NextResponse(JSON.parse(cachedResponse), { status: 204 });
+    } catch {
+      // Ignore invalid cached payload and continue.
+    }
+  }
+
+  const hasProcessingLock = await kv.set(processingKey, "1", {
+    nx: true,
+    px: 60_000,
+  });
+
+  if (!hasProcessingLock) {
+    const retryCachedResponse = await kv.get<string>(idempotencyKey);
+    if (retryCachedResponse) {
+      try {
+        return new NextResponse(JSON.parse(retryCachedResponse), {
+          status: 204,
+        });
+      } catch {
+        // Ignore invalid cached payload and continue below.
+      }
+    }
+
+    return NextResponse.json(
+      {
+        success: false,
+        data: null,
+        error: {
+          message: "An update is already in progress for this request.",
+        },
+      },
+      { status: 409 },
+    );
+  }
+
   const workoutTarget = await db.query.workouts.findFirst({
     where: and(eq(workouts.id, id), eq(workouts.userId, existingUser.id)),
   });
@@ -84,9 +202,7 @@ export async function PUT(
   ) as WorkoutUpdateInput;
 
   try {
-    // Usamos una transacción para asegurar que la actualización sea atómica
     await db.transaction(async (tx) => {
-      // 1. Actualizamos la fecha del workout si viene en el body
       if (fecha) {
         await tx
           .update(workouts)
@@ -94,36 +210,21 @@ export async function PUT(
           .where(eq(workouts.id, id));
       }
 
-      // 2. Si se envía la lista de ejercicios, reemplazamos los anteriores
       if (ejercicios) {
-        // Eliminamos los ejercicios viejos vinculados a este workout
         await tx
           .delete(workoutExercises)
           .where(eq(workoutExercises.workoutId, id));
 
         if (ejercicios.length > 0) {
-          // Procesamos, catalogamos y mapeamos los nuevos ejercicios
           const rows = await Promise.all(
             ejercicios.map(async (ex) => {
               const nombreNormalizado = ex.nombre.trim().toLowerCase();
 
-              // Buscamos si ya existe en el catálogo (usando 'tx')
               let catalogEntry = await tx.query.exerciseCatalog.findFirst({
                 where: eq(exerciseCatalog.nombreNormalizado, nombreNormalizado),
               });
-              console.log(
-                "-- Ejercicio a buscar en el catalogo:",
-                nombreNormalizado,
-              );
-              console.log(
-                "-- consulto si existe el ejercicio en el catalogo:",
-                catalogEntry,
-              );
-              // Si no existe, lo clasificamos e insertamos en el catálogo
+
               if (!catalogEntry) {
-                console.log(
-                  "-- no existe, lo clasifico e inserto en el catalogo",
-                );
                 const clasifiedExercise = await classifyExercise(ex.nombre);
                 const catalogId = crypto.randomUUID();
 
@@ -140,12 +241,11 @@ export async function PUT(
                 catalogEntry = inserted;
               }
 
-              // Retornamos el registro listo para asociar al workout
               return {
                 id: crypto.randomUUID(),
-                workoutId: id, // El id del workout que estamos editando
+                workoutId: id,
                 exerciseCatalogId: catalogEntry.id,
-                nombre: catalogEntry.nombreNormalizado, // Guardamos el nombre normalizado
+                nombre: catalogEntry.nombreNormalizado,
                 series: ex.series,
                 repeticiones: ex.repeticiones ?? 0,
                 peso: ex.peso ?? 0,
@@ -155,21 +255,16 @@ export async function PUT(
               };
             }),
           );
-          console.log(
-            "-- Ejercicios nuevos a insertar en workoutExercises:",
-            rows,
-          );
-          // Insertamos los nuevos ejercicios actualizados
+
           await tx.insert(workoutExercises).values(rows);
         }
       }
     });
-    /* const newTrainingState = await generateNewTrainingState(existingUser);
-    if (!newTrainingState) {
-      console.error(
-        "Failed to generate new training state after workout update",
-      );
-    } */
+
+    await kv.set(idempotencyKey, JSON.stringify({ ok: true }), {
+      px: 10 * 60 * 1000,
+    });
+
     return new NextResponse(null, { status: 204 });
   } catch (error) {
     console.error("Error updating workout", error);
@@ -183,5 +278,7 @@ export async function PUT(
       },
       { status: 500 },
     );
+  } finally {
+    await kv.del(processingKey);
   }
 }

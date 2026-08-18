@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { MAX_OBJECTIVE_CONTENT_LENGTH } from "@/lib/schemas/objective";
 
@@ -77,22 +77,35 @@ export default function EditableObjectiveForm({
 }) {
   const [value, setValue] = useState(initial ?? objectivePlaceHolder);
   const [saving, setSaving] = useState(false);
+  const requestIdRef = useRef<string | null>(null);
 
   const currentLength = useMemo(() => value.length, [value]);
   const isOverLimit = currentLength > MAX_OBJECTIVE_CONTENT_LENGTH;
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (saving || isOverLimit) return;
+
+    const idempotencyKey = requestIdRef.current ?? crypto.randomUUID();
+    requestIdRef.current = idempotencyKey;
     setSaving(true);
+
     try {
       const res = await fetch("/api/objective", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": idempotencyKey,
+        },
         body: JSON.stringify({ content: value }),
       });
       if (res.ok) {
         // reload
         window.location.href = "/dashboard";
+      } else if (res.status === 409) {
+        alert(
+          "Ya hay una actualización del objetivo en curso. Esperá unos segundos e inténtalo nuevamente.",
+        );
       } else {
         alert("Error guardando objetivo");
       }
@@ -101,6 +114,7 @@ export default function EditableObjectiveForm({
       alert("Error guardando objetivo");
     } finally {
       setSaving(false);
+      requestIdRef.current = null;
     }
   };
 

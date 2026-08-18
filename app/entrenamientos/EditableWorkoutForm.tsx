@@ -80,8 +80,9 @@ export default function EditableWorkoutForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fecha) return;
+    if (!fecha || isSubmitting) return;
 
+    const idempotencyKey = crypto.randomUUID();
     setIsSubmitting(true);
     try {
       const url =
@@ -90,14 +91,26 @@ export default function EditableWorkoutForm({
 
       const res = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date:fecha, exercises: ejercicios }),
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": idempotencyKey,
+        },
+        body: JSON.stringify({ date: fecha, exercises: ejercicios }),
       });
 
       if (!res.ok) {
+        if (res.status === 409) {
+          alert(
+            "Ya hay una actualización en proceso. Esperá unos segundos y probá otra vez.",
+          );
+          return;
+        }
+
         console.log("Error updating exercise:", await res.text());
         alert("Error al guardar entrenamiento");
+        return;
       }
+
       router.push("/entrenamientos");
       return;
     } catch (error) {
@@ -109,14 +122,24 @@ export default function EditableWorkoutForm({
 
   const handleDelete = async () => {
     if (!confirm("¿Seguro que querés eliminar este entrenamiento?")) return;
+    if (isSubmitting) return;
+
+    const idempotencyKey = crypto.randomUUID();
     setIsSubmitting(true);
     try {
       const res = await fetch(`/api/workouts/${workoutId}`, {
         method: "DELETE",
+        headers: {
+          "Idempotency-Key": idempotencyKey,
+        },
       });
       if (res.ok) {
         router.push("/entrenamientos");
         router.refresh();
+      } else if (res.status === 409) {
+        alert(
+          "Ya hay una eliminación en proceso. Esperá unos segundos y probá otra vez.",
+        );
       } else {
         alert("Error al eliminar.");
       }
