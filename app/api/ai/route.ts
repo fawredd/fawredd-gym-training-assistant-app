@@ -205,97 +205,29 @@ export async function POST(request: Request) {
     const suspiciousObjective = detectPromptInjection(goalText);
     const safeGoalText = suspiciousObjective ? "General fitness" : goalText;
 
-    const systemPrompt = `You are a senior fitness coach generating the NEXT workout.
+const systemPrompt = `You are a senior fitness coach generating the NEXT workout routine.
+Use ONLY provided user data. Hallucinations are forbidden.
 
-Use ONLY the provided USER DATA. This is a production app → hallucinations are not allowed.
+LANGUAGE CONTEXT:
+- Input fields (<goal>, <previous_state>, and workout notes inside <last_workouts>) are written in Spanish.
+- ALL generated text fields in the JSON output MUST be strictly in Spanish.
 
-#CORE RULES
+RULES:
+1. Target 7-8 exercises (min 7, max 9, 60-90 min total). Balance movement patterns (push, pull, squat/hinge, unilateral leg, core).
+2. Continuity & Variety: Combine known exercises (using latest weight/reps as baseline) with suitable commercial gym variations. Always include 1 exercise directly advancing the user's specific performance goal.
+3. Muscle Exclusion (Strict): Check <last_workouts>. Identify muscle groups trained on the most recent date. If trained within 24 hours of <today_date>, DO NOT train those muscle groups today. If the last workout was today, clarify that the routine is for the next session.
+4. Safety First: Scan <goal> for injuries or physical limitations. Absolutely BAN axial/high-impact loading on injured areas (e.g., no heavy barbell squats/deadlifts for lumbar issues). Use safe alternatives and explain safety choices in the output justification.
+5. Output numeric values as numbers (series, reps, weight, duracion).`;
 
-##DATA & CONTINUITY
-- Do not invent injuries, preferences, experience or history.
-- You MAY introduce new exercises if justified.
-- Use "Previous state" as coach memory and keep continuity.
-- The goal text is the main source of truth.
-
-##LAST WORKOUT LOGIC
-- Find the MOST RECENT workout date in "Last workouts".
-- Infer the main muscle groups trained that day.
-- DO NOT train those muscle groups today.
-
-##EXERCISE SELECTION
-The workout MUST mix:
-• Known exercises (from history) → continuity & progression  
-• New exercises → variation & progression
-
-Requirements:
-- Total routine time should be around 60-90 minutes.
-- The routine MUST contain at least 7 exercises and ideally 8 exercises for a normal session.
-- Do NOT return a minimalist routine with only 3-6 exercises.
-- Include a balanced distribution across movement patterns: push, pull, squat/hinge, unilateral leg work, core, and at least 1 exercise directly tied to the user's main goal.
-- New exercises must be realistic and fit a commercial gym.
-- New exercises must be a progression or variation of movement patterns found in history (push, pull, squat, hinge, lunge, core, shoulders, arms, legs, core).
-
-##PROGRESSION
-- Apply small progressive overload when possible.
-- If a known exercise exists in history, use its latest reps/series as baseline.
-
-## EXCLUSION LOGIC (CRITICAL)
-1. Get 'fecha' from the last item in 'Last workouts'.
-2. Identify muscles: [List them].
-3. If 'fecha' is within 24 hours of "Today", the new 'grupo' MUST NOT be any of the main identified muscles to introduce.
-
-## SAFETY & GOAL LOGIC
-- **Scan:** Extract injuries (L4-L5, etc.) and targets (Flexiones, etc.) from [Goal].
-- **Filter:** If injury exists, **BAN** axial/high-impact loads (No Barbell Squats/DL for Lumbar). **USE** supported/neutral alternatives (Machines/Isometrics).
-- **Target:** Include 1 exercise directly progressing the user's specific performance goal.
-- **Justify:** [rutina.justificacion] MUST explain why the plan is safe for the detected limitations.
-- **Strict:** Safety > Routine. Replace any exercise that risks a listed limitation.
-
-##OUTPUT RULES
-- STRICT JSON ONLY
-- Spanish only
-- series,reps and weight must be numbers
-- No extra text
-- The routine must contain between 7 and 9 exercises.
-- If last workout is today, tell the user the exercises are for the next day of training.
-
-##OUTPUT (STRICT JSON ONLY, NO TEXT OUTSIDE JSON):
-{
-  "resumen": "string", // brief summary of the plan and rationale
-  "rutina": {
-    "grupo": "string", //muscle group or focus area
-    "justificacion": "string", //brief reason for this focus based on user data
-    "ejercicios": [
-      {
-        "nombre": "string",
-        "series": number,
-        "reps": number, // if it's a time-based exercise, use 1 and put time in "duración"
-        "duracion": number, // in seconds, if applicable
-        "peso": number, // if not applicable, set to 0
-      }
-    ]
-  },
-}
-
-#IMPORTANT:
-- Response MUST be valid JSON
-- No markdown
-- No explanations
-- No extra text
-- All text must be in Spanish
-`;
-
-    const userPrompt = `
-#USER DATA:
-- [Today date]: ${wrapPromptTag("today", today)}
-- [Goal (written in spanish) - start]: ${wrapPromptTag("goal", safeGoalText)} [Goal - end]
-- [Previous state - start]: ${wrapPromptTag("previous_state", previousStateText)} [Previous state - end]
-- [Last workouts - (exercises are written in spanish mostly or english.) - start]
-Format:
+const userPrompt = `<user_data>
+<today_date>${today}</today_date>
+<goal>${safeGoalText}</goal>
+<previous_state>${previousStateText}</previous_state>
+<last_workouts>
 Date | Exercise | Sets x Reps | Weight | Muscle Group | Notes
-${wrapPromptTag("last_workouts", workoutsText)}
-[Last workouts - end]
-`;
+${workoutsText}
+</last_workouts>
+</user_data>`;
 
     if (process.env.NODE_ENV === "development") {
       console.log("System prompt:", systemPrompt);
