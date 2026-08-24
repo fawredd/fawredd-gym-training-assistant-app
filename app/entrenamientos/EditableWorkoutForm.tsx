@@ -8,15 +8,20 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { format, parseISO } from "date-fns";
 import { ExercisesCombobox } from "@/components/dashboard/ExercicesCombobox";
-import { ApiResponse } from "@/types/api";
 
 interface Exercise {
+  id?: string;
+  clientId?: string;
   nombre: string;
   series: number;
   repeticiones?: number;
   peso?: number;
   duracionSegundos?: number; // en segundos, opcional
   notas?: string | null; // notas opcionales
+}
+
+interface EditableExercise extends Exercise {
+  clientId: string;
 }
 
 interface EditableWorkoutFormProps {
@@ -34,12 +39,17 @@ export default function EditableWorkoutForm({
 }: EditableWorkoutFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deletedExerciseIds, setDeletedExerciseIds] = useState<string[]>([]);
   const [fecha, setFecha] = useState(initialFecha);
-  const [ejercicios, setEjercicios] = useState<Exercise[]>(
+  const [ejercicios, setEjercicios] = useState<EditableExercise[]>(
     initialExercises.length > 0
-      ? initialExercises
+      ? initialExercises.map((exercise) => ({
+          ...exercise,
+          clientId: exercise.clientId ?? crypto.randomUUID(),
+        }))
       : [
           {
+            clientId: crypto.randomUUID(),
             nombre: "",
             series: 3,
             repeticiones: 10,
@@ -54,6 +64,7 @@ export default function EditableWorkoutForm({
     setEjercicios([
       ...ejercicios,
       {
+        clientId: crypto.randomUUID(),
         nombre: "",
         series: 3,
         repeticiones: 10,
@@ -65,17 +76,33 @@ export default function EditableWorkoutForm({
   };
 
   const handleExerciseChange = (
-    index: number,
+    clientId: string,
     field: string,
     value: string | number | null,
   ) => {
-    const updated = [...ejercicios];
-    updated[index] = { ...updated[index], [field]: value };
-    setEjercicios(updated);
+    setEjercicios(
+      ejercicios.map((exercise) =>
+        exercise.clientId === clientId
+          ? { ...exercise, [field]: value }
+          : exercise,
+      ),
+    );
   };
 
-  const handleRemoveExercise = (index: number) => {
-    setEjercicios(ejercicios.filter((_, i) => i !== index));
+  const handleRemoveExercise = (clientId: string) => {
+    const exerciseToRemove = ejercicios.find(
+      (exercise) => exercise.clientId === clientId,
+    );
+    if (exerciseToRemove?.id) {
+      setDeletedExerciseIds((deletedIds) => [
+        ...deletedIds,
+        exerciseToRemove.id!,
+      ]);
+    }
+
+    setEjercicios(
+      ejercicios.filter((exercise) => exercise.clientId !== clientId),
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -88,6 +115,9 @@ export default function EditableWorkoutForm({
       const url =
         mode === "edit" ? `/api/workouts/${workoutId}` : "/api/workouts";
       const method = mode === "edit" ? "PUT" : "POST";
+      const exercisesPayload = ejercicios.map(
+        ({ clientId, ...exercise }) => exercise,
+      );
 
       const res = await fetch(url, {
         method,
@@ -95,7 +125,11 @@ export default function EditableWorkoutForm({
           "Content-Type": "application/json",
           "Idempotency-Key": idempotencyKey,
         },
-        body: JSON.stringify({ date: fecha, exercises: ejercicios }),
+        body: JSON.stringify({
+          date: fecha,
+          exercises: exercisesPayload,
+          deletedExerciseIds,
+        }),
       });
 
       if (!res.ok) {
@@ -168,26 +202,28 @@ export default function EditableWorkoutForm({
       <div className="space-y-4">
         <Label>Ejercicios</Label>
 
-        {ejercicios.map((ex, i) => (
-          <Card key={i} className="relative shadow-sm">
+        {ejercicios.map((ex) => (
+          <Card key={ex.clientId} className="relative shadow-sm">
             <Button
               variant="ghost"
               size="sm"
               type="button"
-              onClick={() => handleRemoveExercise(i)}
+              onClick={() => handleRemoveExercise(ex.clientId)}
               className="absolute top-2 right-2 h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
             >
               ×
             </Button>
             <CardContent className="pt-6 grid gap-4">
               <div className="space-y-2">
-                <Label htmlFor={`nombre-${i}`}>Nombre (ej. Press Banca)</Label>
+                <Label htmlFor={`nombre-${ex.clientId}`}>
+                  Nombre (ej. Press Banca)
+                </Label>
                 <ExercisesCombobox
-                  id={`nombre-${i}`}
+                  id={`nombre-${ex.clientId}`}
                   required
                   value={ex.nombre}
                   onValueChange={(value) =>
-                    handleExerciseChange(i, "nombre", value)
+                    handleExerciseChange(ex.clientId, "nombre", value)
                   }
                 />
                 {/* <Input
@@ -202,16 +238,16 @@ export default function EditableWorkoutForm({
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-2">
-                  <Label htmlFor={`series-${i}`}>Series</Label>
+                  <Label htmlFor={`series-${ex.clientId}`}>Series</Label>
                   <Input
-                    id={`series-${i}`}
+                    id={`series-${ex.clientId}`}
                     type="number"
                     required
                     min="1"
                     value={ex.series}
                     onChange={(e) =>
                       handleExerciseChange(
-                        i,
+                        ex.clientId,
                         "series",
                         parseInt(e.target.value),
                       )
@@ -219,16 +255,16 @@ export default function EditableWorkoutForm({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor={`reps-${i}`}>Reps</Label>
+                  <Label htmlFor={`reps-${ex.clientId}`}>Reps</Label>
                   <Input
-                    id={`reps-${i}`}
+                    id={`reps-${ex.clientId}`}
                     type="number"
                     required
                     min="0"
                     value={ex.repeticiones}
                     onChange={(e) =>
                       handleExerciseChange(
-                        i,
+                        ex.clientId,
                         "repeticiones",
                         parseInt(e.target.value),
                       )
@@ -236,16 +272,16 @@ export default function EditableWorkoutForm({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor={`peso-${i}`}>Peso(kg)</Label>
+                  <Label htmlFor={`peso-${ex.clientId}`}>Peso(kg)</Label>
                   <Input
-                    id={`peso-${i}`}
+                    id={`peso-${ex.clientId}`}
                     type="number"
                     required
                     min="0"
                     value={ex.peso}
                     onChange={(e) =>
                       handleExerciseChange(
-                        i,
+                        ex.clientId,
                         "peso",
                         parseFloat(e.target.value),
                       )
@@ -253,16 +289,18 @@ export default function EditableWorkoutForm({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor={`duracion-${i}`}>Duración(seg)</Label>
+                  <Label htmlFor={`duracion-${ex.clientId}`}>
+                    Duración(seg)
+                  </Label>
                   <Input
-                    id={`duracion-${i}`}
+                    id={`duracion-${ex.clientId}`}
                     type="number"
                     required
                     min="0"
                     value={ex.duracionSegundos}
                     onChange={(e) =>
                       handleExerciseChange(
-                        i,
+                        ex.clientId,
                         "duracionSegundos",
                         parseFloat(e.target.value),
                       )
@@ -271,14 +309,14 @@ export default function EditableWorkoutForm({
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor={`notas-${i}`}>Notas</Label>
+                <Label htmlFor={`notas-${ex.clientId}`}>Notas</Label>
                 <Input
-                  id={`notas-${i}`}
+                  id={`notas-${ex.clientId}`}
                   type="text"
                   required
                   value={ex.notas ?? ""}
                   onChange={(e) =>
-                    handleExerciseChange(i, "notas", e.target.value)
+                    handleExerciseChange(ex.clientId, "notas", e.target.value)
                   }
                 />
               </div>

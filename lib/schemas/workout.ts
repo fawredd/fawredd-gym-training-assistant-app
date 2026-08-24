@@ -5,6 +5,7 @@ export const MAX_EXERCISE_NAME_LENGTH = 120;
 export const MAX_NOTES_LENGTH = 400;
 
 export const workoutExerciseInputSchema = z.object({
+  id: z.string().optional(),
   nombre: z.string().min(1),
   series: z.number().int().optional().nullable(),
   repeticiones: z.number().int().optional().nullable(),
@@ -22,6 +23,7 @@ export const workoutCreateInputSchema = z.object({
 export const workoutUpdateInputSchema = z.object({
   date: z.string().min(1).optional(),
   exercises: z.array(workoutExerciseInputSchema).optional(),
+  deletedExerciseIds: z.array(z.string()).optional(),
 });
 
 export const savedWorkoutResultSchema = z.object({

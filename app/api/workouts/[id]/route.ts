@@ -7,7 +7,7 @@ import {
   users,
   exerciseCatalog,
 } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { kv } from "@vercel/kv";
 import { classifyExercise } from "@/lib/muscleClassifier";
 import { generateNewTrainingState } from "@/lib/training-state-utils";
@@ -197,12 +197,22 @@ export async function PUT(
 
   const body = await req.json();
   const parsedBody = workoutUpdateInputSchema.safeParse(body);
-  const { date: fecha, exercises: ejercicios } = (
+  const {
+    date: fecha,
+    exercises: ejercicios,
+    deletedExerciseIds = [],
+  } = (
     parsedBody.success ? parsedBody.data : (body as WorkoutUpdateInput)
   ) as WorkoutUpdateInput;
 
   try {
     await db.transaction(async (tx) => {
+      await tx
+        .select({ id: workouts.id })
+        .from(workouts)
+        .where(and(eq(workouts.id, id), eq(workouts.userId, existingUser.id)))
+        .for("update");
+
       if (fecha) {
         await tx
           .update(workouts)
@@ -211,52 +221,86 @@ export async function PUT(
       }
 
       if (ejercicios) {
-        await tx
-          .delete(workoutExercises)
+        const existingExercises = await tx
+          .select({ id: workoutExercises.id })
+          .from(workoutExercises)
           .where(eq(workoutExercises.workoutId, id));
+        const existingExerciseIds = new Set(
+          existingExercises.map((exercise) => exercise.id),
+        );
+        const submittedExistingIds = ejercicios
+          .map((exercise) => exercise.id)
+          .filter((exerciseId): exerciseId is string => Boolean(exerciseId));
+        const referencedIds = [...submittedExistingIds, ...deletedExerciseIds];
 
-        if (ejercicios.length > 0) {
-          const rows = await Promise.all(
-            ejercicios.map(async (ex) => {
-              const nombreNormalizado = ex.nombre.trim().toLowerCase();
+        if (
+          referencedIds.some(
+            (exerciseId) => !existingExerciseIds.has(exerciseId),
+          ) ||
+          new Set(referencedIds).size !== referencedIds.length
+        ) {
+          throw new Error("Invalid exercise identity for workout update");
+        }
 
-              let catalogEntry = await tx.query.exerciseCatalog.findFirst({
-                where: eq(exerciseCatalog.nombreNormalizado, nombreNormalizado),
-              });
+        if (deletedExerciseIds.length > 0) {
+          await tx
+            .delete(workoutExercises)
+            .where(
+              and(
+                eq(workoutExercises.workoutId, id),
+                inArray(workoutExercises.id, deletedExerciseIds),
+              ),
+            );
+        }
 
-              if (!catalogEntry) {
-                const clasifiedExercise = await classifyExercise(ex.nombre);
-                const catalogId = crypto.randomUUID();
+        for (const ex of ejercicios) {
+          const nombreNormalizado = ex.nombre.trim().toLowerCase();
+          let catalogEntry = await tx.query.exerciseCatalog.findFirst({
+            where: eq(exerciseCatalog.nombreNormalizado, nombreNormalizado),
+          });
 
-                const [inserted] = await tx
-                  .insert(exerciseCatalog)
-                  .values({
-                    id: catalogId,
-                    nombreNormalizado: clasifiedExercise.nombreEstandarizado,
-                    grupoMuscular: clasifiedExercise.grupoMuscular,
-                    actividad: clasifiedExercise.actividad,
-                  })
-                  .returning();
-
-                catalogEntry = inserted;
-              }
-
-              return {
+          if (!catalogEntry) {
+            const clasifiedExercise = await classifyExercise(ex.nombre);
+            const [inserted] = await tx
+              .insert(exerciseCatalog)
+              .values({
                 id: crypto.randomUUID(),
-                workoutId: id,
-                exerciseCatalogId: catalogEntry.id,
-                nombre: catalogEntry.nombreNormalizado,
-                series: ex.series,
-                repeticiones: ex.repeticiones ?? 0,
-                peso: ex.peso ?? 0,
-                duracionSegundos: ex.duracionSegundos ?? 0,
-                grupoMuscular: catalogEntry.grupoMuscular,
-                notas: ex.notas ?? null,
-              };
-            }),
-          );
+                nombreNormalizado: clasifiedExercise.nombreEstandarizado,
+                grupoMuscular: clasifiedExercise.grupoMuscular,
+                actividad: clasifiedExercise.actividad,
+              })
+              .returning();
+            catalogEntry = inserted;
+          }
 
-          await tx.insert(workoutExercises).values(rows);
+          const exerciseValues = {
+            exerciseCatalogId: catalogEntry.id,
+            nombre: catalogEntry.nombreNormalizado,
+            series: ex.series,
+            repeticiones: ex.repeticiones ?? 0,
+            peso: ex.peso ?? 0,
+            duracionSegundos: ex.duracionSegundos ?? 0,
+            grupoMuscular: catalogEntry.grupoMuscular,
+            notas: ex.notas ?? null,
+          };
+
+          if (ex.id) {
+            await tx
+              .update(workoutExercises)
+              .set(exerciseValues)
+              .where(
+                and(
+                  eq(workoutExercises.id, ex.id),
+                  eq(workoutExercises.workoutId, id),
+                ),
+              );
+          } else {
+            await tx.insert(workoutExercises).values({
+              id: crypto.randomUUID(),
+              workoutId: id,
+              ...exerciseValues,
+            });
+          }
         }
       }
     });

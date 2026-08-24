@@ -5,9 +5,9 @@ import { users, aiMemories } from "../../../db/schema";
 import { eq } from "drizzle-orm";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { google } from "@ai-sdk/google";
-import { streamText } from "ai";
+import { Output, streamText } from "ai";
+import { z } from "zod";
 import { kv } from "@vercel/kv";
-import { parseAIResponse } from "@/lib/ai-response";
 import {
   MAX_PROMPT_SEGMENT_LENGTH,
   MAX_ROUTINE_GROUP_LENGTH,
@@ -99,14 +99,6 @@ function sanitizeAIResponse(parsed: AIRoutineResponse): AIRoutineResponse {
       ejercicios,
     },
   };
-}
-
-function isValidAIResponse(data: unknown): data is AIRoutineResponse {
-  if (data === null || typeof data !== "object") {
-    return false;
-  }
-
-  return "resumen" in data && "rutina" in data;
 }
 
 export async function POST(request: Request) {
@@ -205,7 +197,7 @@ export async function POST(request: Request) {
     const suspiciousObjective = detectPromptInjection(goalText);
     const safeGoalText = suspiciousObjective ? "General fitness" : goalText;
 
-const systemPrompt = `You are a senior fitness coach generating the NEXT workout routine.
+    const systemPrompt = `You are a senior fitness coach generating the NEXT workout routine.
 Use ONLY provided user data. Hallucinations are forbidden.
 
 LANGUAGE CONTEXT:
@@ -219,7 +211,7 @@ RULES:
 4. Safety First: Scan <goal> for injuries or physical limitations. Absolutely BAN axial/high-impact loading on injured areas (e.g., no heavy barbell squats/deadlifts for lumbar issues). Use safe alternatives and explain safety choices in the output justification.
 5. Output numeric values as numbers (series, reps, weight, duracion).`;
 
-const userPrompt = `<user_data>
+    const userPrompt = `<user_data>
 <today_date>${today}</today_date>
 <goal>${safeGoalText}</goal>
 <previous_state>${previousStateText}</previous_state>
@@ -234,29 +226,62 @@ ${workoutsText}
       console.log("User prompt:", userPrompt);
     }
 
-    let text = "";
     const result = streamText({
       model: google("gemini-3.1-flash-lite"),
       system: systemPrompt,
       prompt: userPrompt,
+      output: Output.object({
+        schema: z.object({
+          resumen: z
+            .string()
+            .describe("Brief summary of the plan and rationale in Spanish."),
+          rutina: z.object({
+            grupo: z
+              .string()
+              .describe("Muscle group or focus area in Spanish."),
+            justificacion: z
+              .string()
+              .describe(
+                "Brief reason for this focus based on user data, in Spanish.",
+              ),
+            ejercicios: z.array(
+              z.object({
+                nombre: z.string().describe("Exercise name."),
+                series: z
+                  .number()
+                  .int()
+                  .nonnegative()
+                  .describe("Number of sets."),
+                reps: z
+                  .number()
+                  .int()
+                  .nonnegative()
+                  .describe("Repetitions; use 1 for time-based exercises."),
+                duracion: z
+                  .number()
+                  .int()
+                  .nonnegative()
+                  .describe("Duration in seconds, or 0 when not applicable."),
+                peso: z
+                  .number()
+                  .nonnegative()
+                  .describe("Weight in kilograms, or 0 when not applicable."),
+              }),
+            ),
+          }),
+        }),
+      }),
       topP: 0.1,
       topK: 20,
       maxRetries: 0,
     });
 
+    let parsed: AIRoutineResponse;
     try {
-      for await (const chunk of result.textStream) {
-        text += chunk;
-      }
+      parsed = await result.output;
     } catch (err) {
-      console.error("Error leyendo stream", err);
-    }
-
-    const parsed = parseAIResponse(text);
-
-    if (!parsed || !isValidAIResponse(parsed)) {
-      console.log("--- Failed to parse AI response:", text);
-      return new NextResponse("AI response could not be parsed.", {
+      console.error("Error generando respuesta estructurada", err);
+      return new NextResponse("AI response could not be generated.", {
         status: 422,
       });
     }
