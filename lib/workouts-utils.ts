@@ -167,10 +167,7 @@ export async function saveWorkoutsWithExercises(
             catalogEntry =
               inserted ??
               (await tx.query.exerciseCatalog.findFirst({
-                where: eq(
-                  exerciseCatalog.nombreNormalizado,
-                  nombreNormalizado,
-                ),
+                where: eq(exerciseCatalog.nombreNormalizado, nombreNormalizado),
               }));
 
             if (!catalogEntry) {

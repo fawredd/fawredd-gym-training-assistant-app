@@ -269,7 +269,7 @@ export async function POST(req: Request) {
     });
     if (process.env.NODE_ENV === "development") {
       console.log("ETL AI provider output:", JSON.stringify(result.output));
-    } 
+    }
     const value = result.output;
     const sanitizedOutput = sanitizeWorkoutOutput(value.workouts);
     const insertedData = await saveWorkoutsWithExercises(
