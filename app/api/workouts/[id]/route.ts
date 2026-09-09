@@ -91,16 +91,16 @@ export async function DELETE(
     );
   }
 
-  const workoutTarget = await db.query.workouts.findFirst({
-    where: and(eq(workouts.id, id), eq(workouts.userId, existingUser.id)),
-  });
-
-  if (!workoutTarget)
-    return new NextResponse("Workout not found or access denied", {
-      status: 403,
+  try {
+    const workoutTarget = await db.query.workouts.findFirst({
+      where: and(eq(workouts.id, id), eq(workouts.userId, existingUser.id)),
     });
 
-  try {
+    if (!workoutTarget)
+      return new NextResponse("Workout not found or access denied", {
+        status: 403,
+      });
+
     await db.delete(workouts).where(eq(workouts.id, id));
     await kv.set(idempotencyKey, JSON.stringify({ ok: true }), {
       px: 10 * 60 * 1000,
@@ -187,25 +187,52 @@ export async function PUT(
     );
   }
 
-  const workoutTarget = await db.query.workouts.findFirst({
-    where: and(eq(workouts.id, id), eq(workouts.userId, existingUser.id)),
-  });
-  if (!workoutTarget)
-    return new NextResponse("Workout not found or access denied", {
-      status: 403,
-    });
-
-  const body = await req.json();
-  const parsedBody = workoutUpdateInputSchema.safeParse(body);
-  const {
-    date: fecha,
-    exercises: ejercicios,
-    deletedExerciseIds = [],
-  } = (
-    parsedBody.success ? parsedBody.data : (body as WorkoutUpdateInput)
-  ) as WorkoutUpdateInput;
-
   try {
+    const workoutTarget = await db.query.workouts.findFirst({
+      where: and(eq(workouts.id, id), eq(workouts.userId, existingUser.id)),
+    });
+    if (!workoutTarget)
+      return new NextResponse("Workout not found or access denied", {
+        status: 403,
+      });
+
+    const body = await req.json();
+    const parsedBody = workoutUpdateInputSchema.safeParse(body);
+    if (!parsedBody.success) {
+      return NextResponse.json<ApiResponse<null>>(
+        {
+          success: false,
+          data: null,
+          error: { message: "Invalid workout payload" },
+        },
+        { status: 400 },
+      );
+    }
+
+    const {
+      date: fecha,
+      exercises: ejercicios,
+      deletedExerciseIds = [],
+    } = parsedBody.data;
+
+    const preparedExercises = await Promise.all(
+      (ejercicios ?? []).map(async (exercise) => {
+        const nombreNormalizado = exercise.nombre.trim().toLowerCase();
+        const catalogEntry = await db.query.exerciseCatalog.findFirst({
+          where: eq(exerciseCatalog.nombreNormalizado, nombreNormalizado),
+        });
+
+        return {
+          exercise,
+          nombreNormalizado,
+          catalogEntry,
+          classifiedExercise: catalogEntry
+            ? null
+            : await classifyExercise(exercise.nombre),
+        };
+      }),
+    );
+
     await db.transaction(async (tx) => {
       await tx
         .select({ id: workouts.id })
@@ -253,24 +280,41 @@ export async function PUT(
             );
         }
 
-        for (const ex of ejercicios) {
-          const nombreNormalizado = ex.nombre.trim().toLowerCase();
-          let catalogEntry = await tx.query.exerciseCatalog.findFirst({
-            where: eq(exerciseCatalog.nombreNormalizado, nombreNormalizado),
-          });
+        for (const preparedExercise of preparedExercises) {
+          const { exercise: ex, nombreNormalizado } = preparedExercise;
+          let catalogEntry = preparedExercise.catalogEntry;
 
           if (!catalogEntry) {
-            const clasifiedExercise = await classifyExercise(ex.nombre);
+            const classifiedExercise = preparedExercise.classifiedExercise;
+            if (!classifiedExercise) {
+              throw new Error("Exercise classification was not prepared");
+            }
+
             const [inserted] = await tx
               .insert(exerciseCatalog)
               .values({
                 id: crypto.randomUUID(),
-                nombreNormalizado: clasifiedExercise.nombreEstandarizado,
-                grupoMuscular: clasifiedExercise.grupoMuscular,
-                actividad: clasifiedExercise.actividad,
+                nombreNormalizado,
+                grupoMuscular: classifiedExercise.grupoMuscular,
+                actividad: classifiedExercise.actividad,
+              })
+              .onConflictDoNothing({
+                target: exerciseCatalog.nombreNormalizado,
               })
               .returning();
-            catalogEntry = inserted;
+
+            catalogEntry =
+              inserted ??
+              (await tx.query.exerciseCatalog.findFirst({
+                where: eq(
+                  exerciseCatalog.nombreNormalizado,
+                  nombreNormalizado,
+                ),
+              }));
+
+            if (!catalogEntry) {
+              throw new Error("Failed to create or load exercise catalog row");
+            }
           }
 
           const exerciseValues = {

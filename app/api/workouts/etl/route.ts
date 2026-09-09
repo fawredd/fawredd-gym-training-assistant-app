@@ -4,8 +4,8 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { kv } from "@vercel/kv";
-import { createOpenRouter } from "@openrouter/ai-sdk-provider";
-import { generateText, Output } from "ai";
+import { google } from "@ai-sdk/google";
+import { generateText, NoObjectGeneratedError, Output } from "ai";
 import { z } from "zod";
 import { saveWorkoutsWithExercises } from "@/lib/workouts-utils";
 import {
@@ -15,10 +15,6 @@ import {
   type WorkoutInput,
 } from "@/lib/schemas/workout";
 import { exerciseMuscleGroupSchema } from "@/lib/muscleClassifier";
-
-const openrouter = createOpenRouter({
-  apiKey: process.env.OPENROUTER_API_KEY,
-});
 
 const PROMPT_INJECTION_PATTERN =
   /(ignore(?:\s+(?:all|the))?\s+instructions|ignore previous instructions|ignore prior context|override(?:\s+the)?\s*(?:system|developer)?\s*prompt|system prompt|developer prompt|reveal hidden|bypass|pretend to be|act as|forget everything|<\s*(?:system|developer)\s*>)/i;
@@ -215,7 +211,7 @@ export async function POST(req: Request) {
     const safeReferenceDate = sanitizeReferenceDate(referenceDate);
 
     const result = await generateText({
-      model: openrouter("openrouter/free"),
+      model: google("gemini-3.5-flash-lite"),
       output: Output.object({
         schema: z.object({
           workouts: z
@@ -252,9 +248,10 @@ export async function POST(req: Request) {
                         .int()
                         .default(0)
                         .describe("Weight used per set performed"),
-                      grupoMuscular: exerciseMuscleGroupSchema.describe(
-                        "Muscle group targeted by the exercise",
-                      ),
+                      grupoMuscular: z
+                        .string()
+                        .min(1)
+                        .describe("Muscle group targeted by the exercise"),
                       notas: z
                         .string()
                         .optional()
@@ -268,9 +265,11 @@ export async function POST(req: Request) {
             .min(1, "No workouts were found in the text"),
         }),
       }),
-      prompt: `Reference Date: ${wrapPromptTag("reference_date", safeReferenceDate)}\nYou are a Gym Workout Extractor from user gym exercise descriptions. Extract all workouts from the user's description. User description: ${wrapPromptTag("user_description", safePrompt)}`,
+      prompt: `Reference Date: ${wrapPromptTag("reference_date", safeReferenceDate)}\nYou are a Gym Workout Extractor from user gym exercise descriptions. Extract all workouts from the user's description. Preserve every explicitly stated series, repetition, duration, weight, muscle group, and note exactly. Never replace a stated repetition count with 0. Use 0 only when repetitions are not provided or the exercise is duration-based. User description: ${wrapPromptTag("user_description", safePrompt)}`,
     });
-
+    if (process.env.NODE_ENV === "development") {
+      console.log("ETL AI provider output:", JSON.stringify(result.output));
+    } 
     const value = result.output;
     const sanitizedOutput = sanitizeWorkoutOutput(value.workouts);
     const insertedData = await saveWorkoutsWithExercises(
@@ -293,6 +292,27 @@ export async function POST(req: Request) {
         error.message.includes("Reference date"))
     ) {
       return new NextResponse(error.message, { status: 400 });
+    }
+
+    if (NoObjectGeneratedError.isInstance(error)) {
+      if (process.env.NODE_ENV === "development") {
+        console.error("ETL AI structured-output diagnostics", {
+          text: error.text,
+          cause: error.cause,
+          finishReason: error.finishReason,
+          response: error.response,
+          usage: error.usage,
+        });
+      } else {
+        console.error("ETL AI provider returned invalid structured output", {
+          finishReason: error.finishReason,
+        });
+      }
+
+      return new NextResponse(
+        "The AI provider did not return a valid workout structure.",
+        { status: 502 },
+      );
     }
 
     console.error("ETL Generation failed", error);

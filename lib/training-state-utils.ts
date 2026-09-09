@@ -131,8 +131,7 @@ ${workoutsPrompt}
   }
   try {
     const result = await generateText({
-      model: google("gemini-3.1-flash-lite"),
-      //model: openrouter("openrouter/free"),
+      model: google("gemini-3.5-flash-lite"),
       output: Output.object({
         schema: trainingStateGenerationOutputSchema,
       }),
@@ -140,7 +139,7 @@ ${workoutsPrompt}
       prompt: userPrompt,
       topP: 0.1,
       topK: 20,
-      maxRetries: 0,
+      maxRetries: 2,
     });
 
     const newTrainingState = result.output;

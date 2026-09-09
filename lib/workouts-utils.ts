@@ -82,9 +82,41 @@ export async function saveWorkoutsWithExercises(
   if (!existingUser)
     throw new Error("Saving workout failed: User profile not found");
 
+  const preparedWorkouts: Array<{
+    workout: WorkoutInput;
+    exercises: Array<{
+      exercise: WorkoutInput["exercises"][number];
+      nombreNormalizado: string;
+      catalogEntry: ExerciseCatalogRow | undefined;
+      classifiedExercise: Awaited<ReturnType<typeof classifyExercise>> | null;
+    }>;
+  }> = [];
+  for (const workout of workoutsData) {
+    const exercises = [];
+
+    for (const exercise of workout.exercises) {
+      const nombreNormalizado = exercise.nombre.trim().toLowerCase();
+      const catalogEntry = await db.query.exerciseCatalog.findFirst({
+        where: eq(exerciseCatalog.nombreNormalizado, nombreNormalizado),
+      });
+
+      exercises.push({
+        exercise,
+        nombreNormalizado,
+        catalogEntry,
+        classifiedExercise: catalogEntry
+          ? null
+          : await classifyExercise(exercise.nombre),
+      });
+    }
+
+    preparedWorkouts.push({ workout, exercises });
+  }
+
   // Usamos una transacción para asegurar consistencia
   await db.transaction(async (tx) => {
-    for (const w of workoutsData) {
+    for (const preparedWorkout of preparedWorkouts) {
+      const { workout: w, exercises } = preparedWorkout;
       const workoutId = crypto.randomUUID();
 
       // 1. Crear el entrenamiento principal y asegurar que exista antes de insertar hijos
@@ -104,20 +136,18 @@ export async function saveWorkoutsWithExercises(
       const persistedWorkoutId = insertedWorkout.id;
 
       if (w.exercises && w.exercises.length > 0) {
-        // 2. Procesar, catalogar e insertar cada ejercicio de forma secuencial
+        // 2. Catalog entries and workout exercises are written in one transaction.
         const rows = [];
 
-        for (const ex of w.exercises) {
-          const nombreNormalizado = ex.nombre.trim().toLowerCase();
+        for (const preparedExercise of exercises) {
+          const { exercise: ex, nombreNormalizado } = preparedExercise;
+          let catalogEntry = preparedExercise.catalogEntry;
 
-          // Buscar en el catálogo
-          let catalogEntry = await tx.query.exerciseCatalog.findFirst({
-            where: eq(exerciseCatalog.nombreNormalizado, nombreNormalizado),
-          });
-
-          // Si no existe, clasificar e insertar en catálogo
           if (!catalogEntry) {
-            const clasifiedExercise = await classifyExercise(ex.nombre);
+            const classifiedExercise = preparedExercise.classifiedExercise;
+            if (!classifiedExercise) {
+              throw new Error("Exercise classification was not prepared");
+            }
 
             const catalogId = crypto.randomUUID();
 
@@ -126,12 +156,26 @@ export async function saveWorkoutsWithExercises(
               .values({
                 id: catalogId,
                 nombreNormalizado,
-                grupoMuscular: clasifiedExercise.grupoMuscular,
-                actividad: clasifiedExercise.actividad,
+                grupoMuscular: classifiedExercise.grupoMuscular,
+                actividad: classifiedExercise.actividad,
+              })
+              .onConflictDoNothing({
+                target: exerciseCatalog.nombreNormalizado,
               })
               .returning();
 
-            catalogEntry = inserted;
+            catalogEntry =
+              inserted ??
+              (await tx.query.exerciseCatalog.findFirst({
+                where: eq(
+                  exerciseCatalog.nombreNormalizado,
+                  nombreNormalizado,
+                ),
+              }));
+
+            if (!catalogEntry) {
+              throw new Error("Failed to create or load exercise catalog row");
+            }
           }
 
           rows.push({
@@ -158,7 +202,12 @@ export async function saveWorkoutsWithExercises(
       });
     }
   });
-  const newTrainingState = await generateNewTrainingState(existingUser);
+
+  try {
+    await generateNewTrainingState(existingUser);
+  } catch (error) {
+    console.warn("Failed to refresh training state after workout save", error);
+  }
 
   return insertedWorkouts;
 }

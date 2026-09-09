@@ -139,9 +139,18 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const parsedBody = workoutCreateInputSchema.safeParse(body);
-    const { date, exercises } = (
-      parsedBody.success ? parsedBody.data : (body as WorkoutInput)
-    ) as WorkoutInput;
+    if (!parsedBody.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          data: null,
+          error: { message: "Invalid workout payload" },
+        },
+        { status: 400 },
+      );
+    }
+
+    const { date, exercises } = parsedBody.data;
 
     const workoutInput: WorkoutInput = {
       date,
