@@ -47,12 +47,8 @@
           "tableFrom": "ai_logs",
           "tableTo": "users",
           "schemaTo": "fawredd_gym",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -100,12 +96,8 @@
           "tableFrom": "ai_memories",
           "tableTo": "users",
           "schemaTo": "fawredd_gym",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -181,12 +173,8 @@
           "tableFrom": "push_subscriptions",
           "tableTo": "users",
           "schemaTo": "fawredd_gym",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -234,12 +222,8 @@
           "tableFrom": "training_objectives",
           "tableTo": "users",
           "schemaTo": "fawredd_gym",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -335,12 +319,8 @@
           "tableFrom": "training_states",
           "tableTo": "users",
           "schemaTo": "fawredd_gym",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -427,9 +407,7 @@
         "users_external_auth_id_unique": {
           "name": "users_external_auth_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "external_auth_id"
-          ]
+          "columns": ["external_auth_id"]
         }
       },
       "policies": {},
@@ -508,12 +486,8 @@
           "tableFrom": "workout_exercises",
           "tableTo": "workouts",
           "schemaTo": "fawredd_gym",
-          "columnsFrom": [
-            "workout_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["workout_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -568,12 +542,8 @@
           "tableFrom": "workouts",
           "tableTo": "users",
           "schemaTo": "fawredd_gym",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -589,20 +559,12 @@
     "fawredd_gym.experiencia": {
       "name": "experiencia",
       "schema": "fawredd_gym",
-      "values": [
-        "principiante",
-        "intermedio",
-        "avanzado"
-      ]
+      "values": ["principiante", "intermedio", "avanzado"]
     },
     "fawredd_gym.objetivo": {
       "name": "objetivo",
       "schema": "fawredd_gym",
-      "values": [
-        "hipertrofia",
-        "fuerza",
-        "mantenimiento"
-      ]
+      "values": ["hipertrofia", "fuerza", "mantenimiento"]
     }
   },
   "schemas": {
