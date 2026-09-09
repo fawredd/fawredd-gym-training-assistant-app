@@ -97,7 +97,6 @@ Detalle extendido y cualitativo de las metas de entrenamiento redactadas por el 
 **Estado del Perfil Evolutivo.** Representa la foto consolidada de la situación física y el plan táctico actual que la IA computa sobre el atleta basándose en su historial de ejercicios (`last_workout_id`).
 * `id` (`text`, PK)
 * `user_id` (`text`, FK -> `users.id`, Not Null)
-* `last_workout_id` (`text`, FK -> `workouts.id`): Último entrenamiento procesado para generar este estado.
 * `priority_goals` / `secondary_goals` (`text`): Objetivos principales y secundarios actuales.
 * `progression_focus` (`text`): En qué métrica o variable se está buscando sobrecarga progresiva.
 * `weak_areas` (`text`): Puntos débiles detectados (ej. falta de volumen en cadena posterior).

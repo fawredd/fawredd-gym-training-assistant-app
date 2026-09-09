@@ -101,7 +101,9 @@ export async function DELETE(
         status: 403,
       });
 
-    await db.delete(workouts).where(eq(workouts.id, id));
+    await db.transaction(async (tx) => {
+      await tx.delete(workouts).where(eq(workouts.id, id));
+    });
     await kv.set(idempotencyKey, JSON.stringify({ ok: true }), {
       px: 10 * 60 * 1000,
     });

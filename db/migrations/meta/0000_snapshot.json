@@ -343,20 +343,6 @@
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
-        },
-        "training_states_last_workout_id_workouts_id_fk": {
-          "name": "training_states_last_workout_id_workouts_id_fk",
-          "tableFrom": "training_states",
-          "tableTo": "workouts",
-          "schemaTo": "fawredd_gym",
-          "columnsFrom": [
-            "last_workout_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
