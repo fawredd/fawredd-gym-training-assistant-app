@@ -228,6 +228,13 @@ ${workoutsText}
 
     const result = streamText({
       model: google("gemini-3.1-flash-lite"),
+providerOptions: {
+  google: {
+    thinkingConfig: {
+      thinkingLevel: "high",
+    },
+  },
+},
       system: systemPrompt,
       prompt: userPrompt,
       output: Output.object({
