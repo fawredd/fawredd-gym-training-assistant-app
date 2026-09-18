@@ -132,13 +132,18 @@ ${workoutsPrompt}
   try {
     const result = await generateText({
       model: google("gemini-3.5-flash-lite"),
+providerOptions: {
+  google: {
+    thinkingConfig: {
+      thinkingLevel: "high",
+    },
+  },
+},
       output: Output.object({
         schema: trainingStateGenerationOutputSchema,
       }),
       system: systemPrompt,
       prompt: userPrompt,
-      topP: 0.1,
-      topK: 20,
       maxRetries: 2,
     });
 
