@@ -209,6 +209,11 @@ export async function POST(req: Request) {
   try {
     const safePrompt = sanitizePromptText(prompt, MAX_PROMPT_LENGTH);
     const safeReferenceDate = sanitizeReferenceDate(referenceDate);
+    if (process.env.NODE_ENV === "development") {
+      console.log(
+        `# ETL user prompt: User description: ${wrapPromptTag("user_description", safePrompt)}`,
+      );
+    }
 
     const result = await generateText({
       model: google("gemini-3.5-flash-lite"),
@@ -227,36 +232,52 @@ export async function POST(req: Request) {
                       nombre: z
                         .string()
                         .min(1)
-                        .describe("Name of the exercise"),
+                        .describe("Exact name of the exercise"),
+
                       series: z
                         .number()
                         .int()
-                        .default(1)
-                        .describe("Number of sets performed"),
+                        .min(1)
+                        .describe(
+                          "Number of sets explicitly stated in the user input",
+                        ),
+
                       repeticiones: z
                         .number()
                         .int()
-                        .default(0)
-                        .describe("Number of repetitions per set performed"),
+                        .nullable()
+                        .describe(
+                          "Number of repetitions per set. REQUIRED. Extract the exact number stated by the user. Use null only when repetitions are not provided or the exercise is duration-based.",
+                        ),
+
                       duracionSegundos: z
                         .number()
                         .int()
-                        .default(0)
-                        .describe("Duration in seconds per set performed"),
+                        .nullable()
+                        .describe(
+                          "Duration in seconds per set. REQUIRED. Convert stated duration to seconds. Use null only when duration is not provided.",
+                        ),
+
                       peso: z
                         .number()
-                        .int()
-                        .default(0)
-                        .describe("Weight used per set performed"),
+                        .nullable()
+                        .describe(
+                          "Weight used per set, in kg. REQUIRED. Extract the exact numeric weight stated by the user. Use null only when no weight is provided.",
+                        ),
+
                       grupoMuscular: z
                         .string()
                         .min(1)
-                        .describe("Muscle group targeted by the exercise"),
+                        .describe(
+                          "Primary muscle group targeted by the exercise",
+                        ),
+
                       notas: z
                         .string()
-                        .optional()
                         .nullable()
-                        .describe("Optional notes for the exercise"),
+                        .describe(
+                          "Optional note explicitly stated by the user, such as FPE 9. Use null when there is no note.",
+                        ),
                     }),
                   )
                   .min(1, "Each workout must have at least one exercise"),
@@ -265,7 +286,24 @@ export async function POST(req: Request) {
             .min(1, "No workouts were found in the text"),
         }),
       }),
-      prompt: `Reference Date: ${wrapPromptTag("reference_date", safeReferenceDate)}\nYou are a Gym Workout Extractor from user gym exercise descriptions. Extract all workouts from the user's description. Preserve every explicitly stated series, repetition, duration, weight, muscle group, and note exactly. Never replace a stated repetition count with 0. Use 0 only when repetitions are not provided or the exercise is duration-based. User description: ${wrapPromptTag("user_description", safePrompt)}`,
+      system: `You are a Gym Workout Extractor from user gym exercise descriptions.
+Extract all workouts from the user's description. 
+Preserve every explicitly stated series, repetition, duration, weight, muscle group, and note exactly.
+Never replace a stated repetition count with 0. 
+Use 0 only when repetitions are not provided or the exercise is duration-based. 
+An example of user input: 
+"
+• Press de pecho en máquina: 3x12 @ 40kg FPE 8 ( Exercise: Chest Press Machine, 3 sets of 12 reps at 40kg, note: FPE 8 )
+• Flexiones de brazos (rodillas apoyadas): 3x12 FPE 7( Exercise: Knee Push-ups, 3 sets of 12 reps, note: FPE 7 )
+• Press de hombros en máquina: 3x12 @ 15kg ( Exercise: Shoulder Press Machine, 3 sets of 12 reps at 15kg )
+• Elevaciones laterales con mancuernas: 3x12 @ 5kg ( Exercise: Lateral Raises, 3 sets of 12 reps at 5kg )
+• Tríceps en polea: 3x12 @ 40kg ( Exercise: Tricep Pulldown, 3 sets of 12 reps at 40kg )
+• Pallof press: 3x12 @ 5kg ( Exercise: Pallof Press, 3 sets of 12 reps at 5kg )
+• Plancha abdominal isométrica: 3x60s FPE 6 ( Exercise: Isometric Plank, 3 sets of 60 seconds with note: FPE 6 )
+• Bird dog: 3x12 ( Exercise: Bird Dog, 3 sets of 12 reps )
+"
+`,
+      prompt: `${wrapPromptTag("reference_date", safeReferenceDate)}${wrapPromptTag("user_description", safePrompt)}`,
     });
     if (process.env.NODE_ENV === "development") {
       console.log("ETL AI provider output:", JSON.stringify(result.output));

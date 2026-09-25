@@ -49,18 +49,19 @@ export async function getLatestTrainingStateAsMDTable(
   });
 
   if (!latestState) {
-    return "Sin estado previo.";
+    return "No previous state found.";
   }
 
-  return `Fecha: ${format(latestState.createdAt, "yyyy-MM-dd")}
-Metas prioritarias: ${latestState.priorityGoals}
-Metas secundarias: ${latestState.secondaryGoals}
-Enfoque progresión: ${latestState.progressionFocus}
-Puntos a mejorar: ${latestState.weakAreas}
-Estrategia semanal: ${latestState.weeklyStrategy}
-Siguiente paso: ${latestState.recommendationNext}
-Notas recuperación: ${latestState.recoveryNotes}
-Análisis evolución: ${latestState.evolutionAnalysis}`.trim();
+  return `
+* Fecha: ${format(latestState.updatedAt, "yyyy-MM-dd")}
+* Metas prioritarias: ${latestState.priorityGoals}
+* Metas secundarias: ${latestState.secondaryGoals}
+* Enfoque progresión: ${latestState.progressionFocus}
+* Puntos a mejorar: ${latestState.weakAreas}
+* Estrategia semanal: ${latestState.weeklyStrategy}
+* Siguiente paso: ${latestState.recommendationNext}
+* Notas recuperación: ${latestState.recoveryNotes}
+* Análisis evolución: ${latestState.evolutionAnalysis}`.trim();
 }
 
 /**
@@ -89,18 +90,18 @@ export async function generateNewTrainingState(
 
   // Keep prompt concise to reduce token usage; instruct AI to be brief and output only required JSON block
   const systemPrompt = `You are a senior fitness coach updating a user's strategic TRAINING STATE summary.
-Analyze user goals, prior state, and recent workouts to generate a concise progress update.
+Analyze user instructions, prior state, and recent workouts to generate a concise progress update.
 
 RULES:
-- Maintain continuity with the prior state and objective.
-- Do NOT invent history, injuries, or preferences.
+- Hallucinations are forbidden.
 - Write ALL response field values strictly in Spanish.
-- Be extremely concise, actionable, and focused on strategic evaluation rather than specific exercise descriptions.`;
+- Be extremely concise, actionable, and focused on strategic evaluation rather than specific exercise descriptions.
+`;
 
   const latestObjective =
     (await fetchLatestTrainingObjective(existingUser)) ||
     JSON.parse(
-      "{content: 'El usuario no tiene un objetivo de entrenamiento registrado. Se sugiere un objetivo general de fitness y bienestar.'}",
+      "{content: 'The user does not have registered training instructions. A general fitness and wellness goal is suggested.'}",
     );
 
   const latestState = await getLatestTrainingStateAsMDTable(existingUser);
@@ -110,17 +111,19 @@ RULES:
 
   const userPrompt = `<today>${today}</today>
 
-<OBJETIVO_PRINCIPAL>
+<user_instructions>
+(this text may be in spanish)
 ${latestObjective?.content}
-</OBJETIVO_PRINCIPAL>
+</user_instructions>
 
-<ESTADO_ANTERIOR>
+<previous_state>
+(this text is in spanish)
 ${latestState}
-</ESTADO_ANTERIOR>
+</previous_state>
 
-<HISTORIAL_DE_ENTRENAMIENTOS_RECIENTES>
+<recent_workouts>
 ${workoutsPrompt}
-</HISTORIAL_DE_ENTRENAMIENTOS_RECIENTES>
+</recent_workouts>
 `;
 
   if (process.env.NODE_ENV === "development") {
@@ -132,14 +135,18 @@ ${workoutsPrompt}
   try {
     const result = await generateText({
       model: google("gemini-3.5-flash-lite"),
+      providerOptions: {
+        google: {
+          thinkingConfig: {
+            thinkingLevel: "high", // Options: 'minimal', 'low', 'medium', 'high'
+          },
+        },
+      },
       output: Output.object({
         schema: trainingStateGenerationOutputSchema,
       }),
       system: systemPrompt,
       prompt: userPrompt,
-      topP: 0.1,
-      topK: 20,
-      maxRetries: 2,
     });
 
     const newTrainingState = result.output;

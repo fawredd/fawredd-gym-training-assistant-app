@@ -201,19 +201,16 @@ export async function POST(request: Request) {
 Use ONLY provided user data. Hallucinations are forbidden.
 
 LANGUAGE CONTEXT:
-- Input fields (<goal>, <previous_state>, and workout notes inside <last_workouts>) are written in Spanish.
+- Input fields (<user_text>, <previous_state>, and workout notes inside <last_workouts>) maybe written in Spanish.
 - ALL generated text fields in the JSON output MUST be strictly in Spanish.
 
 RULES:
-1. Target 7-8 exercises (min 7, max 9, 60-90 min total). Balance movement patterns (push, pull, squat/hinge, unilateral leg, core).
-2. Continuity & Variety: Combine known exercises (using latest weight/reps as baseline) with suitable commercial gym variations. Always include 1 exercise directly advancing the user's specific performance goal.
-3. Muscle Exclusion (Strict): Check <last_workouts>. Identify muscle groups trained on the most recent date. If trained within 24 hours of <today_date>, DO NOT train those muscle groups today. If the last workout was today, clarify that the routine is for the next session.
-4. Safety First: Scan <goal> for injuries or physical limitations. Absolutely BAN axial/high-impact loading on injured areas (e.g., no heavy barbell squats/deadlifts for lumbar issues). Use safe alternatives and explain safety choices in the output justification.
-5. Output numeric values as numbers (series, reps, weight, duracion).`;
+1. Target 60-90 min total.
+2. Output numeric values as numbers (series, reps, weight, duracion).`;
 
     const userPrompt = `<user_data>
 <today_date>${today}</today_date>
-<goal>${safeGoalText}</goal>
+<user_text>${safeGoalText}</user_text>
 <previous_state>${previousStateText}</previous_state>
 <last_workouts>
 Date | Exercise | Sets x Reps | Weight | Muscle Group | Notes
@@ -227,7 +224,14 @@ ${workoutsText}
     }
 
     const result = streamText({
-      model: google("gemini-3.1-flash-lite"),
+      model: google("gemini-3.5-flash-lite"),
+      providerOptions: {
+        google: {
+          thinkingConfig: {
+            thinkingLevel: "high", // Options: 'minimal', 'low', 'medium', 'high'
+          },
+        },
+      },
       system: systemPrompt,
       prompt: userPrompt,
       output: Output.object({
@@ -271,9 +275,6 @@ ${workoutsText}
           }),
         }),
       }),
-      topP: 0.1,
-      topK: 20,
-      maxRetries: 0,
     });
 
     let parsed: AIRoutineResponse;
