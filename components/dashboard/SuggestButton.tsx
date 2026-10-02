@@ -26,10 +26,12 @@ export function SuggestButton() {
     setLoading(true);
 
     try {
+      const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone; // ej: "America/Argentina/Buenos_Aires"
       const res = await fetch("/api/ai", {
         method: "POST",
         headers: {
           "Idempotency-Key": idempotencyKey,
+          "Time-Zone": userTimeZone,
         },
       });
 

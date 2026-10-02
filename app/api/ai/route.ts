@@ -117,6 +117,7 @@ export async function POST(request: Request) {
     request.headers.get("Idempotency-Key") ??
     request.headers.get("idempotency-key") ??
     request.headers.get("x-idempotency-key");
+  const timeZone = request.headers.get("Time-Zone") ?? "UTC";
 
   if (!incomingIdempotencyKey?.trim()) {
     return new NextResponse("Missing Idempotency-Key header", { status: 400 });
@@ -185,7 +186,10 @@ export async function POST(request: Request) {
     const latestState = await getLatestTrainingStateAsMDTable(existingUser);
     const workoutsPrompt = await fetchRecentWorkoutsAsMDTable(existingUser);
     const latestObjective = await fetchLatestTrainingObjective(existingUser);
-    const today = format(new Date(), "yyyy-MM-dd");
+    const today = new Intl.DateTimeFormat("es-US", {
+      dateStyle: "full",
+      timeZone: timeZone,
+    }).format(new Date());
 
     const goalText = sanitizePromptSegment(
       latestObjective?.content ?? existingUser.objetivo ?? "General fitness",
@@ -301,7 +305,8 @@ ${workoutsText}
       console.warn("- Failed to persist AI memory -", e);
     }
 
-    try {
+//NO NECESITO ACTUALIZAR EL ESTADO DE ENTRENAMIENTO, YA QUE NO SE UTILIZA PARA NADA, SOLO SE GENERA UNA NUEVA RUTINA
+/*     try {
       console.log("--- Generating new training state ---");
       const newTrainingState = await generateNewTrainingState(existingUser);
       if (!newTrainingState) {
@@ -314,12 +319,17 @@ ${workoutsText}
         status: 500,
       });
     }
-
+ */
     await kv.set(idempotencyKey, JSON.stringify(sanitizedParsed), {
       px: 10 * 60 * 1000,
     });
 
     console.log("- Returning AI routine response -");
+    
+    if (process.env.NODE_ENV === "development") {
+      console.log(JSON.stringify(sanitizedParsed));
+    }
+
     return NextResponse.json(sanitizedParsed);
   } catch (error) {
     console.error("--- AI Generation failed ---", error);
